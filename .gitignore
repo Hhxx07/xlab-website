@@ -1,0 +1,45 @@
+# ===========================================================================
+# .gitignore — 版本控制忽略规则
+# ===========================================================================
+
+# 依赖目录
+node_modules/
+vendor/
+
+# 构建产物
+dist/
+build/
+tmp/
+
+# Go
+*.exe
+*.test
+*.out
+go.sum
+
+# 环境变量（生产机密密）
+.env
+.env.local
+.env.production
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+air-*.log
+
+# Docker
+docker-compose.override.yml
+
+# 数据库
+*.db
+*.sqlite

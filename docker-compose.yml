@@ -1,0 +1,119 @@
+# ===========================================================================
+# Docker Compose — 开发环境编排
+# 
+# 服务说明：
+#   postgres  - PostgreSQL 18 主数据库
+#   redis     - Redis 8 缓存/队列（Phase 1 仅启动，后续使用）
+#   api       - Go HTTP API 服务（air 热重载）
+#   worker    - Go 后台任务（骨架，后续启用）
+#   frontend  - Vite React 开发服务器
+#
+# 启动命令：docker compose up -d
+# 日志查看：docker compose logs -f api
+# ===========================================================================
+
+services:
+  # -----------------------------------------------------------------------
+  # PostgreSQL — 主数据库
+  # -----------------------------------------------------------------------
+  postgres:
+    image: postgres:18
+    container_name: xlab-postgres
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # -----------------------------------------------------------------------
+  # Redis — 可选缓存与队列（Phase 1 仅启动容器）
+  # -----------------------------------------------------------------------
+  redis:
+    image: redis:8
+    container_name: xlab-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # -----------------------------------------------------------------------
+  # Go API 服务 — 使用 air 实现热重载
+  # -----------------------------------------------------------------------
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    container_name: xlab-api
+    ports:
+      - "8080:8080"
+    volumes:
+      # 挂载源码目录，air 检测到文件变更后自动重新编译
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgres://app:app@postgres:5432/app?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - APP_ENV=development
+      - JWT_SECRET=dev-secret-change-in-production
+      - PORT=8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # -----------------------------------------------------------------------
+  # Go Worker — 后台任务（Phase 1 仅骨架）
+  # -----------------------------------------------------------------------
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    container_name: xlab-worker
+    command: ["air", "-c", ".air.worker.toml"]
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgres://app:app@postgres:5432/app?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - APP_ENV=development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # -----------------------------------------------------------------------
+  # 前端 Vite 开发服务器
+  # -----------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: xlab-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      # 匿名卷避免覆盖容器内 node_modules
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080
+    depends_on:
+      - api
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+volumes:
+  postgres_data:
