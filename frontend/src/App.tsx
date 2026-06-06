@@ -1,68 +1,50 @@
-// ===========================================================================
-// 应用根组件 — src/App.tsx
-// 
-// 职责：
-//   1. 路由配置（React Router v7）
-//   2. 应用初始化（恢复 session）
-// ===========================================================================
-
 import { useEffect } from 'react'
-import { Routes, Route } from 'react-router-dom'
-import { useAuthStore } from './store/authStore'
-
-// 布局
+import { Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
-
-// 页面
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
+import NotePage from './pages/NotePage'
 import ProfilePage from './pages/ProfilePage'
+import RegisterPage from './pages/RegisterPage'
+import WorldPage from './pages/WorldPage'
+import { useAuthStore } from './store/authStore'
 
 export default function App() {
-  // 应用启动时尝试恢复登录状态
   const { fetchMe } = useAuthStore()
 
   useEffect(() => {
-    // 页面加载/刷新时，通过 session cookie 自动恢复登录状态
     fetchMe()
   }, [fetchMe])
 
   return (
     <Routes>
-      {/* Layout 作为父路由，所有子页面共享导航栏 + 页脚 */}
       <Route element={<Layout />}>
-        {/* 首页 */}
         <Route path="/" element={<HomePage />} />
-
-        {/* 认证 */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-
-        {/* 用户 — 个人资料（需登录） */}
         <Route path="/profile" element={<ProfilePage />} />
-
-        {/* 404 — 兜底路由 */}
-        <Route path="*" element={
-          <div className="min-h-[70vh] flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-5xl mb-4">🔍</div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                页面未找到
-              </h1>
-              <p className="text-sm text-gray-500 mb-6">
-                你访问的页面不存在，或者已被移动
-              </p>
-              <a
-                href="/"
-                className="inline-block px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors text-sm font-medium"
-              >
-                返回首页
-              </a>
+        <Route path="/notes/*" element={<NotePage />} />
+        <Route
+          path="*"
+          element={
+            <div className="flex min-h-[70vh] items-center justify-center bg-slate-50 px-5">
+              <div className="max-w-md rounded-md border border-slate-200 bg-white p-8 text-center shadow-sm">
+                <h1 className="text-2xl font-semibold text-slate-950">页面未找到</h1>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  你访问的页面不存在，或已经被移动。
+                </p>
+                <a
+                  href="/"
+                  className="mt-6 inline-flex rounded-md bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                >
+                  返回首页
+                </a>
+              </div>
             </div>
-          </div>
-        } />
+          }
+        />
       </Route>
+      <Route path="/world" element={<WorldPage />} />
     </Routes>
   )
 }
