@@ -1,226 +1,296 @@
-# XLab — 内容社区平台
+# XLab
 
-> 一个可长期演进的内容社区平台：博客、讨论、信息流聚合、用户仪表盘
+Notion-style personal homepage plus a 3D voxel town entrance for notes, posts, and personal content.
 
-## 技术栈
+The current frontend MVP includes:
 
-| 层级 | 技术 | 说明 |
-|------|------|------|
-| **前端** | React 19 + TypeScript + Vite | SPA 应用，组件化开发 |
-| **样式** | Tailwind CSS 3 | 原子化 CSS，快速构建 UI |
-| **状态管理** | Zustand | 轻量客户端状态 |
-| **路由** | React Router v7 | 客户端路由 |
-| **后端** | Go 1.25 + chi | REST API 服务 |
-| **数据库** | PostgreSQL 18 | 主数据库 |
-| **缓存** | Redis 8 | 缓存与队列（后续启用） |
-| **日志** | zerolog | 结构化日志 |
-| **认证** | Argon2id + HttpOnly Cookie | 密码哈希 + 会话管理 |
-| **容器化** | Docker + Docker Compose | 一键启动开发环境 |
+- Public homepage at `/`
+- Fullscreen 3D voxel town at `/world`
+- Markdown note pages at `/notes/*`
+- Six content modules: knowledge, game, life, movie, novel, sport
+- WASD / arrow-key player movement
+- `E` interaction prompts and Markdown-style modal notes
+- Login kept only for actions such as commenting, liking, writing, and admin work
 
-## 项目结构
+## Tech Stack
 
-```
-26.6-xlab网站/
-├── design.md                     # 完整设计文档
-├── docker-compose.yml            # 一键启动所有服务
-├── .gitignore
-│
-├── frontend/                     # React 前端
-│   ├── Dockerfile                # 前端开发容器
-│   ├── index.html
-│   ├── vite.config.ts            # Vite + API 代理配置
-│   ├── tailwind.config.js
-│   ├── postcss.config.js
-│   ├── tsconfig.json
-│   └── src/
-│       ├── main.tsx              # 应用入口
-│       ├── App.tsx               # 路由配置
-│       ├── index.css             # Tailwind 指令
-│       ├── api/client.ts         # fetch 封装 + 错误处理
-│       ├── store/authStore.ts    # Zustand 认证状态
-│       ├── types/index.ts        # TypeScript 类型定义
-│       ├── components/
-│       │   ├── Layout.tsx        # 页面布局（导航栏 + 页脚）
-│       │   └── Navbar.tsx        # 顶部导航栏
-│       └── pages/
-│           ├── HomePage.tsx      # 首页
-│           ├── LoginPage.tsx     # 登录页
-│           ├── RegisterPage.tsx  # 注册页
-│           └── ProfilePage.tsx   # 个人资料页
-│
-└── backend/                      # Go 后端
-    ├── Dockerfile                # 多阶段构建
-    ├── .air.toml                 # API 热重载配置
-    ├── .air.worker.toml          # Worker 热重载配置
-    ├── go.mod / go.sum
-    ├── cmd/
-    │   ├── api/main.go           # HTTP API 入口
-    │   └── worker/main.go        # 后台任务入口（骨架）
-    ├── internal/
-    │   ├── auth/                 # 认证模块
-    │   │   ├── handler.go        # HTTP 处理器
-    │   │   ├── service.go        # 业务逻辑（Argon2id 哈希）
-    │   │   ├── repository.go     # 数据访问层
-    │   │   └── middleware.go     # 认证中间件
-    │   ├── user/                 # 用户模块
-    │   │   ├── handler.go
-    │   │   ├── service.go
-    │   │   └── repository.go
-    │   └── platform/             # 基础设施
-    │       ├── config/config.go  # 环境变量配置
-    │       ├── database/postgres.go  # PostgreSQL 连接池
-    │       └── logger/           # zerolog 日志
-    └── migrations/               # SQL 迁移文件
-        ├── 000001_init_users.up.sql     # users + user_identities
-        ├── 000001_init_users.down.sql
-        ├── 000002_add_sessions.up.sql   # sessions
-        └── 000002_add_sessions.down.sql
+| Layer | Tech |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite |
+| 3D | three, @react-three/fiber, @react-three/drei |
+| Styling | Tailwind CSS |
+| State | Zustand |
+| Routing | React Router |
+| Backend | Go 1.25, chi |
+| Database | PostgreSQL 18 |
+| Cache / Queue | Redis 8 |
+| Dev Env | Docker Compose |
+
+## Project Structure
+
+```text
+.
+├─ design.md
+├─ docker-compose.yml
+├─ README.md
+├─ frontend/
+│  ├─ Dockerfile
+│  ├─ package.json
+│  ├─ vite.config.ts
+│  └─ src/
+│     ├─ App.tsx
+│     ├─ pages/
+│     │  ├─ HomePage.tsx
+│     │  ├─ WorldPage.tsx
+│     │  ├─ NotePage.tsx
+│     │  ├─ LoginPage.tsx
+│     │  ├─ RegisterPage.tsx
+│     │  └─ ProfilePage.tsx
+│     ├─ features/world/
+│     │  ├─ WorldCanvas.tsx
+│     │  ├─ WorldScene.tsx
+│     │  ├─ Player.tsx
+│     │  ├─ CameraRig.tsx
+│     │  ├─ components/
+│     │  ├─ modules/
+│     │  ├─ controls/
+│     │  ├─ data/
+│     │  ├─ store/
+│     │  └─ utils/
+│     └─ content/notes/
+└─ backend/
+   ├─ Dockerfile
+   ├─ cmd/
+   ├─ internal/
+   └─ migrations/
 ```
 
-## 快速开始
+## Quick Start
 
-### 前置条件
+### Option 1: Full Docker Development
 
-- [Docker](https://www.docker.com/) + Docker Compose
-- [Node.js](https://nodejs.org/) 22+（仅本地开发需要）
-- [Go](https://go.dev/) 1.25+（仅本地开发需要）
-
-### 方式一：Docker 一键启动（推荐）
+Use this when you want frontend, backend, PostgreSQL, and Redis running together.
 
 ```bash
-# 启动所有服务（PostgreSQL、Redis、API、Worker、前端）
-docker compose up -d
+docker compose up --build
+```
 
-# 查看日志
+Open:
+
+- Frontend: http://localhost:5173
+- 3D world: http://localhost:5173/world
+- API health: http://localhost:8080/api/health
+- PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
+
+Useful commands:
+
+```bash
+docker compose logs -f frontend
 docker compose logs -f api
-
-# 停止
 docker compose down
 ```
 
-启动后访问：
-
-| 服务 | 地址 |
-|------|------|
-| 前端页面 | http://localhost:5173 |
-| API 服务 | http://localhost:8080 |
-| PostgreSQL | localhost:5432 |
-| Redis | localhost:6379 |
-
-### 方式二：本地开发
+If dependencies changed, rebuild the frontend container:
 
 ```bash
-# 1. 启动 PostgreSQL 和 Redis（Docker）
+docker compose build frontend
+docker compose up frontend
+```
+
+### Option 2: Docker Databases + Local Frontend / Backend
+
+Use this for the fastest frontend debugging loop.
+
+Terminal 1:
+
+```bash
 docker compose up -d postgres redis
-
-# 2. 后端
-cd backend
-cp .env.example .env  # 编辑环境变量（可选）
-go run ./cmd/api/
-
-# 3. 前端（另一个终端）
-cd frontend
-npm install
-npm run dev
 ```
 
-### 方式三：仅前端开发（连远程 API）
+Terminal 2, backend:
+
+```bash
+cd backend
+go run ./cmd/api
+```
+
+Terminal 3, frontend:
 
 ```bash
 cd frontend
 npm install
 npm run dev
-# 访问 http://localhost:5173
-# API 请求自动代理到 localhost:8080
 ```
 
-## API 端点
+Open:
 
-### 认证
+- http://localhost:5173
+- http://localhost:5173/world
+- http://localhost:5173/notes/knowledge/math
 
-| 方法 | 端点 | 说明 | 认证 |
-|------|------|------|------|
-| `POST` | `/api/auth/register` | 邮箱注册 | ❌ |
-| `POST` | `/api/auth/login` | 邮箱登录 | ❌ |
-| `POST` | `/api/auth/logout` | 登出 | ✅ Cookie |
-| `GET` | `/api/auth/me` | 当前用户信息 | ✅ Cookie |
-| `GET` | `/api/auth/github/start` | GitHub OAuth 入口 | ❌（骨架） |
-| `GET` | `/api/auth/github/callback` | GitHub OAuth 回调 | ❌（骨架） |
+### Option 3: Frontend Only
 
-### 用户
+Use this when you only need the homepage and 3D prototype. Auth API calls may fail until the backend is running, but public routes and the 3D world still load.
 
-| 方法 | 端点 | 说明 | 认证 |
-|------|------|------|------|
-| `GET` | `/api/users/{username}` | 用户公开资料 | ❌ |
-| `PATCH` | `/api/users/me` | 更新个人资料 | ✅ Cookie |
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-### 健康检查
+## Debugging Notes
+
+### Vite inside Docker
+
+The frontend container listens on `0.0.0.0:5173`. Docker Compose also enables polling:
+
+```yaml
+CHOKIDAR_USEPOLLING: "true"
+WATCHPACK_POLLING: "true"
+```
+
+This makes hot reload more reliable on Windows bind mounts.
+
+### PostgreSQL 18 Volume Layout
+
+PostgreSQL 18 Docker images expect the volume to be mounted at:
+
+```text
+/var/lib/postgresql
+```
+
+This project uses the `postgres18_data` volume for that reason. If you previously ran an older compose file that mounted `/var/lib/postgresql/data`, recreate the containers after pulling this change:
+
+```bash
+docker compose down
+docker compose up --build
+```
+
+If you intentionally need to reset local development data, remove the volume as well:
+
+```bash
+docker compose down -v
+```
+
+### API Proxy
+
+Vite proxies `/api` to:
+
+```text
+VITE_API_BASE_URL=http://api:8080
+```
+
+When running frontend locally outside Docker, the fallback target in `vite.config.ts` is still `http://api:8080`; if you need local API proxying, start Vite like this:
+
+```bash
+cd frontend
+$env:VITE_API_BASE_URL="http://localhost:8080"
+npm run dev
+```
+
+PowerShell syntax is shown above. In bash:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8080 npm run dev
+```
+
+### 3D World Controls
+
+On `/world`:
+
+- `WASD` / arrow keys: move
+- `E`: interact with the nearest hotspot
+- `Esc`: close modal; if no modal is open, return to homepage
+- `Enter`: open the current note as a full page when the modal is open
+
+## Validation
+
+Frontend build:
+
+```bash
+cd frontend
+npm run build
+```
+
+Backend build:
+
+```bash
+cd backend
+go build ./...
+```
+
+Full Docker smoke test:
+
+```bash
+docker compose up --build
+```
+
+Then verify:
 
 ```bash
 curl http://localhost:8080/api/health
-# → {"status":"ok"}
 ```
 
-## 安全设计
+## Adding a New House
 
-- **密码哈希**：Argon2id（64MB 内存、3 次迭代、4 并行度）
-- **会话管理**：256-bit 随机 token → SHA-256 哈希存库 → 原始 token 通过 HttpOnly Cookie 返回
-- **Cookie 属性**：`HttpOnly`（JS 不可读）、`SameSite=Lax`（防 CSRF）
-- **密码验证**：常量时间比较（防时序攻击）
-- **数据库**：参数化查询（防 SQL 注入）
+1. Add a module entry in `frontend/src/features/world/data/worldModules.ts`.
+2. Create a new component under `frontend/src/features/world/modules/`.
+3. Register the component in `moduleComponents` inside `WorldScene.tsx`.
+4. Add one or more hotspots in `frontend/src/features/world/data/hotspots.ts`.
+5. Add Markdown content under `frontend/src/content/notes/`.
+6. Register the Markdown file in `frontend/src/content/notes/noteRegistry.ts`.
 
-## 数据库迁移
+## Replacing Geometry with GLB Models
 
-迁移文件位于 `backend/migrations/`。
+Each house is isolated in its own component, for example:
 
-**本地手动执行：**
+```text
+frontend/src/features/world/modules/KnowledgeHouse.tsx
+```
+
+To replace a procedural house:
+
+1. Put the model under `frontend/public/models/knowledge-house.glb`.
+2. Use `useGLTF('/models/knowledge-house.glb')` inside the house component.
+3. Keep the outer `<group position={position}>`.
+4. Keep `HouseLabel` or replace it with a better label.
+5. Do not move hotspot coordinates unless the model footprint changes.
+
+The interaction system is data-driven, so replacing visuals should not require changing modal or keyboard logic.
+
+## Common Commands
 
 ```bash
-# 安装 golang-migrate CLI
-go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+# Frontend
+cd frontend
+npm install
+npm run dev
+npm run build
 
-# 执行迁移
-migrate -database "postgres://app:app@localhost:5432/app?sslmode=disable" \
-        -path backend/migrations up
+# Backend
+cd backend
+go run ./cmd/api
+go build ./...
+
+# Docker
+docker compose up --build
+docker compose logs -f frontend
+docker compose logs -f api
+docker compose down
 ```
 
-**Docker 中自动执行：** API 服务启动时自动运行迁移。
+## Current MVP Routes
 
-## 开发阶段
+| Route | Description |
+| --- | --- |
+| `/` | Notion-style personal homepage with 3D world preview |
+| `/world` | Fullscreen interactive 3D voxel town |
+| `/notes/knowledge/math` | Example Markdown note page |
+| `/login` | Login |
+| `/register` | Register |
+| `/profile` | Profile page |
 
-| Phase | 内容 | 状态 |
-|-------|------|------|
-| **Phase 0** | 项目骨架：Docker、Go 后端、数据库迁移、Tailwind CSS | ✅ 完成 |
-| **Phase 1** | 用户系统：注册/登录/Session/用户资料页 | ✅ 完成 |
-| Phase 2 | 博客核心：发帖、Markdown 编辑、信息流 | 🔜 待开发 |
-| Phase 3 | 评论与行级标注 | 🔜 待开发 |
-| Phase 4 | 统计与互动：阅读统计、点赞、仪表盘 | 🔜 待开发 |
-| Phase 5 | 搜索与订阅 | 🔜 待开发 |
-| Phase 6 | 爬虫与热点 | 🔜 待开发 |
-| Phase 7 | 工程化增强：测试、CI、生产部署 | 🔜 待开发 |
-
-## 常见命令
-
-```bash
-# 后端编译检查
-cd backend && go build ./...
-
-# 后端运行测试（后续）
-cd backend && go test ./...
-
-# 前端类型检查
-cd frontend && npx tsc --noEmit
-
-# 前端构建
-cd frontend && npm run build
-
-# Docker 重建某个服务
-docker compose up -d --build api
-
-# 查看数据库
-docker compose exec postgres psql -U app -d app
-```
-
-## 许可证
+## License
 
 MIT

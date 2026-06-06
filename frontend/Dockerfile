@@ -1,17 +1,16 @@
-# ===========================================================================
-# 前端 Dockerfile — Vite React 开发环境
-# 
-# 源码通过 docker-compose volumes 挂载，实现热模块替换（HMR）
-# ===========================================================================
+# Frontend development image for Vite + React.
+#
+# Source files are mounted by docker-compose during development. The anonymous
+# /app/node_modules volume keeps container-installed dependencies from being
+# overwritten by the bind mount.
 
 FROM node:22-alpine
 
 WORKDIR /app
 
-# 预复制 package.json 以利用缓存层
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 RUN npm install
 
-# 源码通过 volume 挂载
-# 默认命令由 docker-compose.yml 指定
+EXPOSE 5173
+
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
