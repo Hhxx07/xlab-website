@@ -21,8 +21,22 @@ export default function WorldCanvas({
   preview?: boolean
 }) {
   return (
-    <Canvas shadows dpr={[1, 1.75]} gl={{ antialias: true }}>
-      <OrthographicCamera makeDefault position={[8, 8, 8]} zoom={preview ? 38 : 48} near={0.1} far={100} />
+    <Canvas
+      dpr={1}
+      gl={{
+        antialias: true,
+        alpha: false,
+        powerPreference: 'high-performance',
+      }}
+      style={{ width: '100%', height: '100%', display: 'block' }}
+    >
+      <OrthographicCamera
+        makeDefault
+        position={[8, 8, 8]}
+        zoom={preview ? 38 : 48}
+        near={0.1}
+        far={100}
+      />
       <WorldScene controls={controls} preview={preview} />
     </Canvas>
   )

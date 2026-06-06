@@ -31,8 +31,25 @@ export const useWorldStore = create<WorldState>((set) => ({
   isNewsModalOpen: false,
   movementEnabled: true,
   visitedModules: [],
-  setPlayerPosition: (position) => set({ playerPosition: position }),
-  setActiveHotspot: (hotspot) => set({ activeHotspot: hotspot }),
+  setPlayerPosition: (position) =>
+    set((state) => {
+      const current = state.playerPosition
+      if (
+        current[0] === position[0] &&
+        current[1] === position[1] &&
+        current[2] === position[2]
+      ) {
+        return state
+      }
+      return { playerPosition: position }
+    }),
+  setActiveHotspot: (hotspot) =>
+    set((state) => {
+      if (state.activeHotspot?.id === hotspot?.id) {
+        return state
+      }
+      return { activeHotspot: hotspot }
+    }),
   openNote: (slug) =>
     set({
       activeNoteSlug: slug,

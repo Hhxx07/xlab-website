@@ -13,7 +13,15 @@ export default function Player({
   controls: MutableRefObject<MovementInput>
 }) {
   const group = useRef<THREE.Group>(null)
-  const position = useWorldStore((state) => state.playerPosition)
+  const initialPosition = useRef(useWorldStore.getState().playerPosition)
+  const positionRef = useRef<[number, number, number]>([...initialPosition.current])
+  const targetPosition = useRef(
+    new THREE.Vector3(
+      initialPosition.current[0],
+      initialPosition.current[1],
+      initialPosition.current[2],
+    ),
+  )
   const setPlayerPosition = useWorldStore((state) => state.setPlayerPosition)
   const movementEnabled = useWorldStore((state) => state.movementEnabled)
 
@@ -23,24 +31,26 @@ export default function Player({
     const direction = movementEnabled ? getIsoMovement(controls.current) : { x: 0, z: 0 }
     const speed = 4.4
     const next: [number, number, number] = [
-      position[0] + direction.x * speed * delta,
+      positionRef.current[0] + direction.x * speed * delta,
       0,
-      position[2] + direction.z * speed * delta,
+      positionRef.current[2] + direction.z * speed * delta,
     ]
     const clamped = clampTownPosition(next)
 
     if (direction.x !== 0 || direction.z !== 0) {
+      positionRef.current = clamped
       setPlayerPosition(clamped)
     }
 
-    group.current.position.lerp(new THREE.Vector3(clamped[0], 0, clamped[2]), 0.35)
+    targetPosition.current.set(clamped[0], 0, clamped[2])
+    group.current.position.lerp(targetPosition.current, 0.35)
     if (direction.x !== 0 || direction.z !== 0) {
       group.current.rotation.y = Math.atan2(direction.x, direction.z)
     }
   })
 
   return (
-    <group ref={group} position={position}>
+    <group ref={group} position={initialPosition.current}>
       <mesh position={[0, 0.35, 0]} castShadow>
         <boxGeometry args={[0.42, 0.7, 0.32]} />
         <meshStandardMaterial color="#2563eb" />

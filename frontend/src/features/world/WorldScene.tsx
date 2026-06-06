@@ -1,7 +1,8 @@
 import { useFrame } from '@react-three/fiber'
 import type { MutableRefObject } from 'react'
+import { useRef } from 'react'
 import type { MovementInput } from './utils/isoDirection'
-import { hotspots } from './data/hotspots'
+import { hotspots, type WorldHotspot } from './data/hotspots'
 import { worldModules } from './data/worldModules'
 import { distance2D } from './utils/distance'
 import { useWorldStore } from './store/worldStore'
@@ -35,23 +36,28 @@ export default function WorldScene({
   controls: MutableRefObject<MovementInput>
   preview?: boolean
 }) {
-  const playerPosition = useWorldStore((state) => state.playerPosition)
   const setActiveHotspot = useWorldStore((state) => state.setActiveHotspot)
+  const lastHotspotId = useRef<string | null>(null)
 
   useFrame(() => {
     if (preview) return
-    let nearest = null
+    const playerPosition = useWorldStore.getState().playerPosition
+    let nearest: WorldHotspot | null = null
     let nearestDistance = Number.POSITIVE_INFINITY
 
-    hotspots.forEach((hotspot) => {
+    for (const hotspot of hotspots) {
       const dist = distance2D(playerPosition, hotspot.position)
       if (dist < hotspot.radius && dist < nearestDistance) {
         nearest = hotspot
         nearestDistance = dist
       }
-    })
+    }
 
-    setActiveHotspot(nearest)
+    const nextHotspotId = nearest?.id ?? null
+    if (lastHotspotId.current !== nextHotspotId) {
+      lastHotspotId.current = nextHotspotId
+      setActiveHotspot(nearest)
+    }
   })
 
   return (
