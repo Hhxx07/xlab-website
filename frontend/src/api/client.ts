@@ -23,11 +23,14 @@ const API_BASE = '/api'
  * 包含 HTTP 状态码，方便调用方判断错误类型
  */
 export class ApiRequestError extends Error {
+  statusCode: number
+
   constructor(
-    public statusCode: number,
+    statusCode: number,
     message: string,
   ) {
     super(message)
+    this.statusCode = statusCode
     this.name = 'ApiRequestError'
   }
 }

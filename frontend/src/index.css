@@ -1,57 +1,49 @@
-/* ===========================================================================
- * 全局样式 — src/index.css
- * 
- * 使用 Tailwind CSS v3 指令
- * 额外定义基础样式和 CSS 变量
- * =========================================================================== */
-
-/* Tailwind 基础层 — 包含 reset、排版等 */
 @tailwind base;
-/* Tailwind 组件层 — 可使用 @apply 组合样式 */
 @tailwind components;
-/* Tailwind 工具类层 — 所有原子化 CSS 类 */
 @tailwind utilities;
 
-/* ---------------------------------------------------------------------------
- * 全局基础样式
- * --------------------------------------------------------------------------- */
+:root {
+  color: #0f172a;
+  background: #ffffff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
 
-/* 平滑滚动 — 锚点跳转时使用 */
 html {
   scroll-behavior: smooth;
 }
 
-/* 全局字体平滑渲染 */
 body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #ffffff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 选中文本颜色 */
 ::selection {
-  background-color: #bfdbfe; /* brand-200 */
-  color: #1e3a8a;             /* brand-900 */
+  background-color: #dbeafe;
+  color: #0f172a;
 }
 
-/* ---------------------------------------------------------------------------
- * 自定义工具类（@apply 组合）
- * --------------------------------------------------------------------------- */
+@layer base {
+  a,
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 @layer components {
-  /* 卡片容器 — 白色背景 + 圆角 + 边框 + 阴影 */
   .card {
-    @apply bg-white rounded-xl border border-gray-200 shadow-sm;
+    @apply rounded-md border border-slate-200 bg-white shadow-sm;
   }
 
-  /* 主按钮样式 */
   .btn-primary {
-    @apply px-4 py-2 bg-brand-600 text-white rounded-lg 
-           hover:bg-brand-700 transition-colors font-medium text-sm
-           disabled:opacity-60 disabled:cursor-not-allowed;
+    @apply rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
-  /* 次按钮样式 */
   .btn-secondary {
-    @apply px-4 py-2 bg-gray-100 text-gray-700 rounded-lg
-           hover:bg-gray-200 transition-colors text-sm;
+    @apply rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200;
   }
 }

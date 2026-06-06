@@ -1,13 +1,11 @@
-// ===========================================================================
-// 导航栏组件 — src/components/Navbar.tsx
-// 
-// 顶部响应式导航栏：
-//   - 左侧：Logo + 品牌名
-//   - 右侧：首页链接 + 登录/注册 或 用户下拉菜单
-// ===========================================================================
-
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+
+const navItems = [
+  { label: '文章', href: '#posts' },
+  { label: '专题', href: '#topics' },
+  { label: '关于', href: '#about' },
+]
 
 export default function Navbar() {
   const { user, isAuthenticated, logout, isLoading } = useAuthStore()
@@ -19,75 +17,69 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="border-b border-gray-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* ---- 左侧：Logo ---- */}
-          <div className="flex items-center gap-2">
-            <Link to="/" className="flex items-center gap-2 group">
-              {/* Logo 图标 */}
-              <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-700 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm group-hover:shadow-md transition-shadow">
-                X
-              </div>
-              <span className="text-xl font-bold text-gray-900 tracking-tight">
-                XLab
-              </span>
-            </Link>
-          </div>
+    <nav className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
+        <Link to="/" className="flex items-center gap-3" aria-label="XLab Notes 首页">
+          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-950 text-sm font-semibold text-white shadow-sm">
+            XL
+          </span>
+          <span className="text-base font-semibold tracking-wide text-slate-950">
+            XLab Notes
+          </span>
+        </Link>
 
-          {/* ---- 右侧：导航链接 ---- */}
-          <div className="flex items-center gap-4">
-            {/* 首页 */}
-            <Link
-              to="/"
-              className="text-sm text-gray-600 hover:text-brand-600 transition-colors"
+        <div className="hidden items-center gap-8 md:flex">
+          {navItems.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-950"
             >
-              首页
-            </Link>
-
-            {/* 未登录：显示登录/注册按钮 */}
-            {!isLoading && !isAuthenticated && (
-              <>
-                <Link
-                  to="/login"
-                  className="text-sm text-gray-600 hover:text-brand-600 transition-colors"
-                >
-                  登录
-                </Link>
-                <Link
-                  to="/register"
-                  className="text-sm px-4 py-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors shadow-sm"
-                >
-                  注册
-                </Link>
-              </>
-            )}
-
-            {/* 已登录：用户菜单 */}
-            {!isLoading && isAuthenticated && user && (
-              <div className="flex items-center gap-3">
-                {/* 用户资料链接 */}
-                <Link
-                  to="/profile"
-                  className="flex items-center gap-2 text-sm text-gray-700 hover:text-brand-600 transition-colors"
-                >
-                  {/* 头像占位 */}
-                  <div className="w-7 h-7 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center text-xs font-semibold">
-                    {user.username.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="hidden sm:inline">{user.display_name || user.username}</span>
-                </Link>
-                {/* 登出按钮 */}
-                <button
-                  onClick={handleLogout}
-                  className="text-sm text-gray-500 hover:text-red-600 transition-colors cursor-pointer"
-                >
-                  登出
-                </button>
-              </div>
-            )}
-          </div>
+              {item.label}
+            </a>
+          ))}
         </div>
+
+        <div className="flex items-center gap-3">
+          {!isLoading && !isAuthenticated && (
+            <>
+              <Link
+                to="/login"
+                className="hidden text-sm font-medium text-slate-600 transition-colors hover:text-slate-950 sm:inline"
+              >
+                登录
+              </Link>
+              <Link
+                to="/register"
+                className="rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800"
+              >
+                留言 / 创作
+              </Link>
+            </>
+          )}
+
+          {!isLoading && isAuthenticated && user && (
+            <div className="flex items-center gap-3">
+              <Link
+                to="/profile"
+                className="flex items-center gap-2 text-sm font-medium text-slate-700 transition-colors hover:text-slate-950"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-950">
+                  {user.username.charAt(0).toUpperCase()}
+                </span>
+                <span className="hidden max-w-28 truncate sm:inline">
+                  {user.display_name || user.username}
+                </span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-950"
+              >
+                退出
+              </button>
+            </div>
+          )}
+         </div>
       </div>
     </nav>
   )
