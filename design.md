@@ -1,67 +1,84 @@
-# design.md
-
-# 长期可扩展内容社区网站设计文档
+# XLab 个人博客网站设计文档
 
 ## 1. 项目目标
 
-本项目目标是搭建一个可长期演进的网站，初始形态为“博客 + 讨论 + 信息流聚合 + 用户仪表盘”的内容社区平台。系统需要支持用户登录、发帖、Markdown 在线编辑、滚动浏览、评论讨论、行级标注、搜索、阅读统计、点赞、订阅、爬虫抓取与热点信息展示，并通过 Docker 完成开发与部署环境编排。
+本项目的核心目标是搭建一个以个人博客展示为主的网站。第一优先级不是做开放内容社区，而是先提供一个漂亮、清晰、可长期维护的个人主页和文章阅读体验。
+
+网站默认面向公开访客开放：访客可以直接浏览主页、文章列表、文章详情、分类标签、归档和公开资料，不需要登录。只有当用户想要留言、点赞、收藏、订阅、创建自己的内容或进入个人工作台时，系统才要求登录验证。
 
 核心原则：
 
-1. **先做模块化单体，不急于微服务化**：早期开发效率更高，同时通过清晰的包结构、数据库边界、任务队列和事件表预留扩展空间。
-2. **业务模块可插拔**：博客、评论、搜索、订阅、爬虫、通知、埋点等都应作为相对独立模块。
-3. **所有重要行为事件化**：用户行为、内容变化、爬虫结果、通知投递都可以记录为事件，便于统计、推荐、审计和后续分析。
-4. **前后端解耦**：React 负责交互体验，Go 后端提供 REST API，PostgreSQL 负责核心数据持久化。
-5. **可观测、可迁移、可测试**：从第一版开始保留日志、迁移脚本、测试结构和 Docker 环境。
+1. **公开阅读优先**：首页、文章、归档、标签、搜索等主要内容默认无需登录。
+2. **个人品牌优先**：主页保留漂亮的首屏和内容区域，后续填充个人介绍、精选文章、项目经历、照片或作品集。
+3. **低门槛互动**：访客阅读不设阻碍；留言、点赞、收藏等写操作进入登录流程。
+4. **创作能力可扩展**：站长和登录用户可以逐步拥有文章编辑、草稿、发布和个人内容管理能力。
+5. **模块化单体起步**：前期保持 React + Go + PostgreSQL 的清晰单体结构，按 auth、user、post、comment、reaction、search 等模块拆分。
+6. **安全边界明确**：所有写操作都由后端验证登录态和权限，前端只负责展示和交互引导。
 
 ---
 
-## 2. 技术栈
+## 2. 产品定位
 
-### 2.1 前端
+### 2.1 第一阶段定位
+
+第一阶段是个人博客站：
+
+- 一个视觉完成度较高的公开主页。
+- 一个公开文章列表和文章详情页。
+- 文章支持 Markdown 内容展示。
+- 公开访客可以搜索、按标签浏览、阅读文章。
+- 登录用户可以留言、点赞、收藏。
+- 站长可以进入后台创建、编辑、发布文章。
+
+### 2.2 后续扩展方向
+
+后续可以逐步扩展为轻量内容平台：
+
+- 登录用户创建自己的文章或笔记。
+- 用户个人主页。
+- 评论回复和行级标注。
+- 订阅作者、标签或外部信息源。
+- 阅读统计、点赞统计、内容分析。
+- GitHub Trending、RSS 聚合和热点信息展示。
+
+---
+
+## 3. 技术栈
+
+### 3.1 前端
 
 - React：构建单页应用界面。
 - TypeScript：增强类型安全和可维护性。
-- Vite：前端开发构建工具。
-- React Router：前端路由。
-- TanStack Query：服务端状态管理、缓存、分页加载。
-- Zustand：轻量客户端状态管理，例如用户信息、编辑器状态。
-- Tailwind CSS：快速搭建 UI 样式。
-- Markdown 编辑器：可选 `@uiw/react-md-editor`、`Milkdown` 或 `TipTap + Markdown 扩展`。
-- 代码高亮：`shiki` 或 `highlight.js`。
+- Vite：前端开发和构建工具。
+- React Router：页面路由。
+- Zustand：管理登录态、用户信息和局部交互状态。
+- Tailwind CSS：构建页面视觉样式。
+- Markdown 渲染：用于文章详情页和编辑预览。
+- 后续可引入 TanStack Query：管理文章列表、评论、搜索等服务端数据缓存。
 
-### 2.2 后端
+### 3.2 后端
 
 - Go：后端主语言。
-- chi / Gin / Echo：HTTP 路由框架，推荐先用 `chi`，轻量且适合清晰组织 REST API。
-- pgx：Go 连接 PostgreSQL。
-- sqlc：根据 SQL 生成类型安全的 Go 查询代码。
+- chi：轻量 HTTP 路由框架。
+- pgx：连接 PostgreSQL。
 - golang-migrate：数据库迁移。
-- JWT + HttpOnly Cookie：登录态管理。
-- OAuth2：GitHub 登录。
-- zerolog / zap：结构化日志。
-- go-playground/validator：请求参数校验。
+- Argon2id + HttpOnly Cookie：密码哈希和 Session 管理。
+- OAuth2：后续支持 GitHub 登录。
+- zerolog：结构化日志。
 
-### 2.3 数据库与基础设施
+### 3.3 数据库与基础设施
 
 - PostgreSQL：主数据库。
-- Redis：可选，用于缓存、限流、任务队列、热点数据。
+- Redis：可选，用于缓存、限流、任务队列或热点数据。
 - Docker / Docker Compose：本地开发和部署编排。
-- Nginx / Caddy：反向代理与 HTTPS。
+- Caddy / Nginx：生产环境反向代理与 HTTPS。
 - MinIO / S3：后续用于图片、附件、头像等对象存储。
-
-### 2.4 后续可加入
-
-- Meilisearch / Typesense / Elasticsearch：当 PostgreSQL 全文搜索不够用时引入独立搜索引擎。
-- RabbitMQ / NATS / Kafka：当任务队列和事件流规模变大时引入消息系统。
-- Prometheus + Grafana：监控系统指标。
-- OpenTelemetry：链路追踪。
 
 ---
 
-## 3. 总体架构
+## 4. 总体架构
 
-推荐第一阶段采用“模块化单体 + 后台 Worker”的架构：
+第一阶段采用“模块化单体 + 可选 Worker”的架构：
 
 ```text
 [Browser / React]
@@ -76,60 +93,130 @@
 
 [Go Worker]
         |
-        | 定时任务 / 爬虫 / 订阅推送 / 统计聚合
+        | 统计聚合 / 外部抓取 / 定时任务
         v
 [PostgreSQL / Redis]
 ```
 
-模块划分：
+后端模块建议：
 
 ```text
 backend/
   cmd/
     api/              # HTTP API 入口
-    worker/           # 后台任务入口：爬虫、订阅、统计聚合
+    worker/           # 后台任务入口
   internal/
-    auth/             # 邮箱登录、GitHub OAuth、会话
-    user/             # 用户资料、仪表盘
-    post/             # 帖子、Markdown 内容、发布流程
-    comment/          # 底部评论与行级标注
-    reaction/         # 点赞、收藏、阅读统计
-    search/           # 检索
-    feed/             # 滚动信息流
-    subscription/     # 订阅源、推送规则
-    crawler/          # GitHub Trending、RSS、网页抓取
-    analytics/        # 数据埋点
-    notification/     # 通知与推送
+    auth/             # 注册、登录、Session、OAuth
+    user/             # 用户资料、公开主页、个人设置
+    post/             # 博客文章、草稿、发布、标签
+    comment/          # 留言和回复
+    reaction/         # 点赞、收藏
+    search/           # 文章搜索
+    analytics/        # 阅读统计和行为事件
     platform/         # 数据库、日志、配置、中间件
-  migrations/         # SQL 迁移
-  sql/                # sqlc 查询
+  migrations/
 ```
 
 ---
 
-## 4. 核心功能需求
+## 5. 访问与登录策略
 
-## 4.1 用户系统
+### 5.1 无需登录的内容
+
+以下页面和接口默认公开：
+
+- 首页 `/`
+- 文章列表 `/posts`
+- 文章详情 `/posts/:slug`
+- 标签页 `/tags/:tag`
+- 归档页 `/archive`
+- 搜索页 `/search`
+- 关于页 `/about`
+- 公开用户主页 `/users/:username`
+- 公开文章阅读统计展示
+
+### 5.2 需要登录的操作
+
+用户执行以下动作时才需要登录：
+
+- 发表留言或回复。
+- 点赞、收藏或订阅。
+- 创建自己的文章、笔记或内容。
+- 编辑、删除、发布自己的文章。
+- 修改个人资料。
+- 进入个人工作台。
+- 查看私有草稿和个人互动记录。
+
+### 5.3 登录引导
+
+前端不应在用户首次进入网站时强制弹出登录。合适的交互是：
+
+1. 用户正常浏览公开内容。
+2. 用户点击“留言”“点赞”“收藏”“写文章”等按钮。
+3. 如果未登录，跳转到登录页或打开登录弹窗。
+4. 登录成功后回到原操作位置并继续提交。
+
+---
+
+## 6. 首页设计
+
+首页是个人博客的主展示面，需要保留漂亮、可填充的结构。第一版可以先放占位内容，但布局要完整。
+
+### 6.1 首屏
+
+首屏承担个人品牌展示：
+
+- 显示站点名称或个人名称。
+- 简短一句个人定位，例如技术、设计、研究、生活记录等方向。
+- 提供主要入口：最新文章、精选文章、关于我。
+- 背景可以使用高质量图片、个人照片、项目截图或简洁的视觉场景。
+
+首屏不放登录墙，也不把“注册/登录”作为主要目标。
+
+### 6.2 主内容区
+
+首页主体建议包含：
+
+- 精选文章：手动挑选 3 到 6 篇。
+- 最新文章：按发布时间展示。
+- 主题标签：展示主要写作方向。
+- 项目或作品：为后续个人作品集预留区域。
+- 关于我摘要：放一段简短介绍和详情入口。
+
+### 6.3 右侧或底部辅助信息
+
+可选内容：
+
+- 近期更新。
+- 热门文章。
+- 推荐阅读。
+- GitHub、邮箱、社交链接。
+- RSS 订阅入口。
+
+---
+
+## 7. 核心功能需求
+
+## 7.1 用户系统
 
 ### 功能
 
 1. 邮箱注册与登录。
-2. 邮箱验证。
-3. GitHub OAuth 登录。
-4. 用户资料页。
-5. 用户仪表盘。
-6. 登录状态保持。
-7. 后续支持角色权限：普通用户、管理员、内容审核员。
+2. 登录状态保持。
+3. 当前用户信息查询。
+4. 公开用户资料页。
+5. 用户修改自己的资料。
+6. 后续支持 GitHub OAuth 登录。
 
 ### 实现方案
 
-- 邮箱登录第一版建议采用“邮箱 + 密码 + 邮箱验证”。
-- 密码使用 Argon2id 或 bcrypt 哈希存储，绝不保存明文密码。
-- 登录态使用 HttpOnly Cookie 保存 Session Token 或 JWT，避免前端 JS 直接读取敏感 token。
-- GitHub 登录流程：前端跳转到后端 `/auth/github/start`，后端生成 state 并重定向到 GitHub；GitHub 回调到 `/auth/github/callback`；后端用 code 换 access token，再获取 GitHub 用户信息，与本地用户绑定。
-- 一个用户可以同时绑定邮箱登录和 GitHub 登录。
+- 使用邮箱 + 密码作为第一版登录方式。
+- 密码使用 Argon2id 哈希存储。
+- 登录态使用 HttpOnly Cookie 保存 Session Token。
+- 前端通过 `/api/auth/me` 判断当前登录状态。
+- 后端所有写操作必须从 Session 中识别用户，不信任前端传入的 `user_id`。
 
-### 关键数据表
+关键数据表：
 
 - `users`
 - `user_identities`
@@ -138,358 +225,142 @@ backend/
 
 ---
 
-## 4.2 用户仪表盘
+## 7.2 博客文章系统
 
 ### 功能
 
-仪表盘用于展示用户自己的长期数据：
-
-1. 发表的帖子。
-2. 草稿。
-3. 评论与被回复。
-4. 点赞、阅读量、收藏量。
-5. 订阅源。
-6. 最近阅读历史。
-7. 个人行为统计，例如最近 7 天写作次数、浏览次数、互动次数。
+1. 公开访客可以浏览所有已发布文章。
+2. 站长和有权限的登录用户可以创建文章。
+3. 支持草稿、发布、归档、删除。
+4. 支持 Markdown 编辑和渲染。
+5. 支持标签、分类、摘要和封面图。
+6. 支持精选文章和置顶文章。
+7. 支持阅读数统计。
 
 ### 实现方案
 
-- 后端提供 `/api/dashboard/summary` 聚合接口。
-- 对实时性要求低的数据，例如阅读量、趋势、热门内容，可以由 Worker 定时聚合到统计表。
-- 仪表盘不要直接对大表做复杂实时查询，应使用 `post_stats`、`user_stats_daily` 等聚合表。
+文章内容拆分为：
+
+- `posts`：文章元信息，例如标题、作者、状态、slug、摘要、封面图、发布时间。
+- `post_versions`：文章内容版本，保存 Markdown 原文和渲染后的 HTML。
+- `post_tags`：文章标签。
+- `post_stats`：阅读数、点赞数、评论数等聚合数据。
+
+这样可以支持：
+
+1. 草稿和正式发布分离。
+2. 文章版本历史。
+3. 后续协作编辑、审核、回滚。
 
 ---
 
-## 4.3 博客与帖子系统
+## 7.3 留言与评论
 
 ### 功能
 
-1. 所有登录用户都可以发帖。
-2. 支持草稿、发布、归档、删除。
-3. 支持 Markdown 在线编辑。
-4. 支持滚动浏览帖子流。
-5. 支持标签、分类、作者页。
-6. 支持阅读人数统计与点赞。
-7. 支持检索。
+1. 公开访客可以阅读评论。
+2. 用户留言或回复时必须登录。
+3. 支持楼中楼回复。
+4. 支持站长删除、隐藏或置顶评论。
+5. 后续支持行级标注。
 
 ### 实现方案
 
-帖子内容建议拆分为：
-
-- `posts`：帖子元信息，如标题、作者、状态、发布时间。
-- `post_versions`：帖子内容版本，保存 Markdown 原文和渲染后的 HTML。
-- `post_stats`：阅读数、点赞数、评论数等统计字段。
-
-这样做的好处：
-
-1. 支持文章版本历史。
-2. 支持草稿和正式发布分离。
-3. 后续可以做协作编辑、审核流、回滚。
-
-### Markdown 编辑
-
-前端提供左右分栏：
-
-```text
-左侧：Markdown 输入区
-右侧：实时预览区
-顶部：标题、标签、保存草稿、发布按钮
-```
-
-后端保存 Markdown 原文。HTML 可以：
-
-1. 前端实时渲染用于预览。
-2. 后端发布时统一渲染并消毒，防止 XSS。
-
----
-
-## 4.4 评论与行级标注
-
-### 需求
-
-评论系统有两种形态：
-
-1. **底部讨论区**：像普通博客评论，集中在文章下方。
-2. **行级标注**：像飞书文档一样，可以对文章的某一行或某一段发起讨论。
-
-### 实现方案
-
-统一使用 `comments` 表，但通过字段区分评论锚点：
-
-- 底部评论：`anchor_type = 'post'`
-- 行级评论：`anchor_type = 'block'` 或 `anchor_type = 'line'`
-
-为了支持稳定的行级标注，不建议只用“第几行”作为唯一定位方式，因为文章编辑后行号会变化。推荐在 Markdown 渲染阶段给每个段落、标题、代码块生成稳定 block id：
-
-```markdown
-## 标题 A
-
-段落内容……
-```
-
-渲染后：
-
-```html
-<h2 data-block-id="blk_abc123">标题 A</h2>
-<p data-block-id="blk_def456">段落内容……</p>
-```
-
-行级标注可以绑定到：
-
-```text
-post_id + version_id + block_id + optional selected_text_range
-```
-
-这样后续即使文章修改，也可以根据版本和 block id 尽量恢复标注位置。
-
-### 评论结构
-
-支持楼中楼：
+评论统一使用 `comments` 表：
 
 ```text
 comment_id
 post_id
 parent_comment_id
-anchor_type
-anchor_block_id
-content_md
 author_id
+content_md
+status
 created_at
+updated_at
 ```
+
+权限规则：
+
+- `GET /api/posts/:id/comments` 公开。
+- `POST /api/posts/:id/comments` 需要登录。
+- `PATCH /api/comments/:id` 仅作者或管理员可操作。
+- `DELETE /api/comments/:id` 仅作者或管理员可操作。
 
 ---
 
-## 4.5 滚动浏览与信息流
+## 7.4 点赞、收藏与订阅
 
 ### 功能
 
-首页展示所有公开帖子，支持无限滚动：
-
-1. 最新发布。
-2. 热门内容。
-3. 关注作者内容。
-4. 订阅源内容。
-5. GitHub Trending 热点。
+1. 公开访客可以看到点赞数和收藏数。
+2. 用户点击点赞、收藏或订阅时需要登录。
+3. 同一用户对同一目标只能有一次同类型反应。
+4. 支持取消点赞、取消收藏、取消订阅。
 
 ### 实现方案
 
-第一版采用游标分页，不使用 offset 深分页：
+使用统一的 `reactions` 表：
 
 ```text
-GET /api/feed?cursor=xxx&limit=20&type=latest
+user_id
+target_type
+target_id
+reaction_type
+created_at
+unique(user_id, target_type, target_id, reaction_type)
 ```
 
-返回：
+`reaction_type` 可包括：
 
-```json
-{
-  "items": [],
-  "next_cursor": "..."
-}
-```
-
-游标可以由 `created_at + id` 组成，避免数据变多后 offset 查询变慢。
-
-后续可以把信息流拆成多个来源：
-
-- `post`：站内帖子。
-- `external_article`：爬虫抓取文章。
-- `github_trending`：GitHub 热榜。
-- `recommendation`：推荐内容。
+- `like`
+- `bookmark`
+- `follow`
 
 ---
 
-## 4.6 检索功能
+## 7.5 搜索与归档
 
 ### 第一版方案
 
 使用 PostgreSQL Full Text Search：
 
-- 对帖子标题、正文、标签建立全文检索索引。
-- 使用 `tsvector` 保存搜索向量。
-- 使用 GIN 索引加速搜索。
+- 对文章标题、摘要、正文、标签建立全文索引。
+- 搜索结果只返回已发布、公开可见文章。
+- 搜索页无需登录。
 
-搜索范围：
+公开页面：
 
-1. 帖子标题。
-2. 帖子正文。
-3. 作者名。
-4. 标签。
-5. 评论内容。
-6. 外部订阅内容。
+- `/search?q=keyword`
+- `/archive`
+- `/tags/:tag`
 
-### 后续升级
-
-当数据量变大、搜索体验要求更高时，可以接入 Meilisearch / Typesense / Elasticsearch，支持：
-
-1. 拼写容错。
-2. 搜索建议。
-3. 高亮。
-4. 多字段权重。
-5. 中文分词优化。
+后续可接入 Meilisearch、Typesense 或 Elasticsearch。
 
 ---
 
-## 4.7 阅读人数统计与点赞
-
-### 阅读统计
-
-需要区分：
-
-1. PV：页面访问次数。
-2. UV：独立访问人数。
-3. 登录用户阅读。
-4. 匿名用户阅读。
-
-第一版实现：
-
-- 用户打开文章时发送 `POST /api/posts/{id}/view`。
-- 后端记录 `post_views`。
-- 对匿名用户使用匿名 visitor id，存储在 Cookie 中。
-- Worker 定时聚合到 `post_stats.view_count` 和 `post_stats.unique_view_count`。
-
-避免简单刷新刷量：
-
-- 同一用户或同一 visitor 在一定时间窗口内多次打开，只计算一次 UV。
-- PV 可以记录多次，但需要限流。
-
-### 点赞
-
-- 一个用户对同一篇帖子只能点赞一次。
-- 使用唯一约束：`unique(user_id, target_type, target_id, reaction_type)`。
-- 支持取消点赞。
-- 后续可以扩展为收藏、表情反应、踩、感谢等。
-
----
-
-## 4.8 数据埋点：记录用户干了什么、怎么干的
-
-### 目标
-
-埋点不是只记录“点了什么”，还要记录用户完成行为的路径：
-
-- 用户看了什么。
-- 从哪里进入。
-- 停留多久。
-- 滚动到哪里。
-- 是否点赞、评论、订阅。
-- 编辑器中是否保存草稿、发布、放弃。
-- 搜索了什么关键词。
-- 爬虫内容是否被点击。
-
-### 前端事件
-
-前端封装统一方法：
-
-```ts
-track(eventName, properties)
-```
-
-示例：
-
-```ts
-track("post_view", {
-  post_id: "...",
-  source: "home_feed",
-  scroll_depth: 0.8
-})
-```
-
-### 后端事件表
-
-使用 `analytics_events` 表保存原始事件：
-
-```text
-id
-user_id
-anonymous_id
-session_id
-event_name
-entity_type
-entity_id
-properties jsonb
-user_agent
-ip_hash
-created_at
-```
-
-### 注意事项
-
-1. 埋点数据增长很快，必须单独建表。
-2. 原始事件不要直接用于复杂实时查询。
-3. 通过 Worker 聚合为日统计表。
-4. 注意隐私，IP 不保存明文，可保存 hash。
-5. 后续可以按月分区或迁移到 ClickHouse。
-
----
-
-## 4.9 订阅功能与信息流推送
+## 7.6 阅读统计
 
 ### 功能
 
-用户可以订阅：
-
-1. 站内作者。
-2. 站内标签。
-3. 外部 RSS 源。
-4. GitHub Trending。
-5. 指定 GitHub 仓库。
-6. 指定关键词。
+1. 记录文章 PV。
+2. 记录匿名访客 UV。
+3. 记录登录用户阅读。
+4. 聚合展示文章阅读量。
 
 ### 实现方案
 
-核心表：
+- 用户打开文章时前端发送 `POST /api/posts/:id/view`。
+- 匿名访客使用匿名 visitor id，保存在 Cookie 中。
+- 后端写入 `post_views`。
+- Worker 定时聚合到 `post_stats`。
 
-- `subscriptions`：用户订阅了什么。
-- `external_sources`：外部信息源，例如 RSS、GitHub Trending。
-- `external_items`：抓取到的外部内容。
-- `notifications`：需要推送给用户的通知。
-
-Worker 定时执行：
-
-1. 拉取外部源。
-2. 去重保存到 `external_items`。
-3. 根据用户订阅规则生成通知。
-4. 用户登录后在通知中心查看。
-5. 后续支持邮件推送。
+阅读接口可以公开，但需要限流和去重策略。
 
 ---
 
-## 4.10 GitHub Trending 与爬虫
+## 8. 数据库初步设计
 
-### 功能
-
-1. 定时抓取 GitHub Trending。
-2. 保存仓库名、描述、语言、star、链接、抓取时间。
-3. 展示每日/每周热门项目。
-4. 支持用户订阅语言或关键词。
-
-### 实现方案
-
-第一版可以使用爬虫 Worker：
-
-```text
-worker 每隔 N 小时运行
-  -> 请求 GitHub Trending 页面或相关数据源
-  -> 解析仓库列表
-  -> 写入 github_trending_items
-  -> 去重
-  -> 生成 feed item
-```
-
-注意：
-
-1. 爬虫要设置合理频率，不要高频请求。
-2. 保存原始抓取时间和来源 URL。
-3. 对外部数据做去重。
-4. 网络失败时记录错误，不影响主站。
-5. 爬虫模块必须和主 API 解耦。
-
----
-
-## 5. 数据库初步设计
-
-### 5.1 用户相关
+### 8.1 用户相关
 
 ```sql
 create table users (
@@ -505,19 +376,6 @@ create table users (
   updated_at timestamptz not null default now()
 );
 
-create table user_identities (
-  id uuid primary key,
-  user_id uuid not null references users(id) on delete cascade,
-  provider text not null,
-  provider_user_id text not null,
-  provider_username text,
-  provider_email text,
-  access_token_encrypted text,
-  refresh_token_encrypted text,
-  created_at timestamptz not null default now(),
-  unique(provider, provider_user_id)
-);
-
 create table sessions (
   id uuid primary key,
   user_id uuid not null references users(id) on delete cascade,
@@ -529,16 +387,20 @@ create table sessions (
 );
 ```
 
-### 5.2 帖子相关
+### 8.2 文章相关
 
 ```sql
 create table posts (
   id uuid primary key,
   author_id uuid not null references users(id),
   title text not null,
-  slug text unique,
+  slug text unique not null,
+  summary text,
+  cover_image_url text,
   status text not null default 'draft',
   visibility text not null default 'public',
+  is_featured boolean not null default false,
+  is_pinned boolean not null default false,
   published_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -550,7 +412,6 @@ create table post_versions (
   version_no int not null,
   content_md text not null,
   content_html text,
-  block_index jsonb,
   created_by uuid references users(id),
   created_at timestamptz not null default now(),
   unique(post_id, version_no)
@@ -567,42 +428,24 @@ create table post_stats (
   view_count bigint not null default 0,
   unique_view_count bigint not null default 0,
   like_count bigint not null default 0,
+  bookmark_count bigint not null default 0,
   comment_count bigint not null default 0,
   updated_at timestamptz not null default now()
 );
 ```
 
-### 5.3 评论与标注
+### 8.3 评论、互动与阅读
 
 ```sql
 create table comments (
   id uuid primary key,
   post_id uuid not null references posts(id) on delete cascade,
-  post_version_id uuid references post_versions(id),
   author_id uuid not null references users(id),
   parent_comment_id uuid references comments(id) on delete cascade,
-  anchor_type text not null default 'post',
-  anchor_block_id text,
-  anchor_text_start int,
-  anchor_text_end int,
   content_md text not null,
   status text not null default 'visible',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
-);
-```
-
-### 5.4 阅读、点赞、埋点
-
-```sql
-create table post_views (
-  id uuid primary key,
-  post_id uuid not null references posts(id) on delete cascade,
-  user_id uuid references users(id),
-  anonymous_id text,
-  session_id uuid,
-  source text,
-  created_at timestamptz not null default now()
 );
 
 create table reactions (
@@ -615,76 +458,22 @@ create table reactions (
   unique(user_id, target_type, target_id, reaction_type)
 );
 
-create table analytics_events (
+create table post_views (
   id uuid primary key,
+  post_id uuid not null references posts(id) on delete cascade,
   user_id uuid references users(id),
   anonymous_id text,
   session_id uuid,
-  event_name text not null,
-  entity_type text,
-  entity_id uuid,
-  properties jsonb not null default '{}',
-  user_agent text,
-  ip_hash text,
+  source text,
   created_at timestamptz not null default now()
-);
-```
-
-### 5.5 订阅与外部信息
-
-```sql
-create table subscriptions (
-  id uuid primary key,
-  user_id uuid not null references users(id) on delete cascade,
-  target_type text not null,
-  target_value text not null,
-  created_at timestamptz not null default now(),
-  unique(user_id, target_type, target_value)
-);
-
-create table external_sources (
-  id uuid primary key,
-  source_type text not null,
-  name text not null,
-  url text,
-  config jsonb not null default '{}',
-  is_active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
-create table external_items (
-  id uuid primary key,
-  source_id uuid references external_sources(id),
-  title text not null,
-  url text not null,
-  summary text,
-  author text,
-  published_at timestamptz,
-  raw jsonb,
-  created_at timestamptz not null default now(),
-  unique(url)
-);
-
-create table github_trending_items (
-  id uuid primary key,
-  repo_full_name text not null,
-  repo_url text not null,
-  description text,
-  language text,
-  stars int,
-  stars_today int,
-  trending_date date not null,
-  raw jsonb,
-  created_at timestamptz not null default now(),
-  unique(repo_full_name, trending_date)
 );
 ```
 
 ---
 
-## 6. API 初步设计
+## 9. API 初步设计
 
-### 6.1 Auth
+### 9.1 Auth
 
 ```text
 POST   /api/auth/register
@@ -693,78 +482,74 @@ POST   /api/auth/logout
 GET    /api/auth/me
 GET    /api/auth/github/start
 GET    /api/auth/github/callback
-POST   /api/auth/email/verify
 ```
 
-### 6.2 User & Dashboard
+### 9.2 Public Blog
 
 ```text
-GET    /api/users/:username
-PATCH  /api/users/me
-GET    /api/dashboard/summary
-GET    /api/dashboard/posts
-GET    /api/dashboard/comments
-GET    /api/dashboard/subscriptions
-```
-
-### 6.3 Posts
-
-```text
+GET    /api/site/home
 GET    /api/posts
+GET    /api/posts/:slug
+GET    /api/tags
+GET    /api/tags/:tag/posts
+GET    /api/archive
+GET    /api/search?q=keyword
+GET    /api/users/:username
+GET    /api/posts/:id/comments
+POST   /api/posts/:id/view
+```
+
+### 9.3 Authenticated Actions
+
+```text
 POST   /api/posts
-GET    /api/posts/:id
 PATCH  /api/posts/:id
 DELETE /api/posts/:id
 POST   /api/posts/:id/publish
-POST   /api/posts/:id/view
-GET    /api/posts/:id/versions
-```
-
-### 6.4 Comments
-
-```text
-GET    /api/posts/:id/comments
+GET    /api/dashboard/posts
 POST   /api/posts/:id/comments
 PATCH  /api/comments/:id
 DELETE /api/comments/:id
-```
-
-### 6.5 Feed & Search
-
-```text
-GET    /api/feed
-GET    /api/search?q=keyword&type=post
-```
-
-### 6.6 Reactions
-
-```text
 POST   /api/reactions
 DELETE /api/reactions
-```
-
-### 6.7 Subscriptions
-
-```text
-GET    /api/subscriptions
-POST   /api/subscriptions
-DELETE /api/subscriptions/:id
-GET    /api/notifications
-```
-
-### 6.8 Analytics
-
-```text
-POST   /api/analytics/events
+PATCH  /api/users/me
 ```
 
 ---
 
-## 7. 前端页面设计
+## 10. 前端页面设计
 
 ```text
 /
-  首页信息流
+  个人博客首页
+  - 首屏个人展示
+  - 精选文章
+  - 最新文章
+  - 标签入口
+  - 项目或作品预留区
+
+/posts
+  文章列表页
+
+/posts/:slug
+  文章详情页
+  - 正文
+  - 标签
+  - 阅读统计
+  - 公开评论列表
+  - 登录后留言
+
+/tags/:tag
+  标签文章页
+
+/archive
+  归档页
+
+/search
+  搜索结果页
+
+/about
+  关于我
 
 /login
   登录页
@@ -773,223 +558,94 @@ POST   /api/analytics/events
   注册页
 
 /dashboard
-  用户仪表盘
-
-/posts/:id
-  文章详情页
-  - 正文
-  - 行级标注入口
-  - 底部评论区
-  - 点赞 / 阅读数
+  登录后工作台
 
 /editor/new
-  新建文章
+  新建文章，需要登录
 
 /editor/:id
-  编辑文章
-
-/search
-  搜索结果页
-
-/trending
-  GitHub Trending 热点页
-
-/subscriptions
-  订阅管理页
+  编辑文章，需要登录且校验权限
 
 /users/:username
-  用户主页
+  公开用户主页
 ```
 
 ---
 
-## 8. Docker 设计
+## 11. 权限矩阵
 
-本地开发使用 Docker Compose：
-
-```yaml
-services:
-  frontend:
-    build: ./frontend
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-    environment:
-      - VITE_API_BASE_URL=http://localhost:8080
-
-  api:
-    build: ./backend
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres
-      - redis
-    environment:
-      - DATABASE_URL=postgres://app:app@postgres:5432/app?sslmode=disable
-      - REDIS_URL=redis://redis:6379
-      - APP_ENV=development
-
-  worker:
-    build: ./backend
-    command: ["./worker"]
-    depends_on:
-      - postgres
-      - redis
-    environment:
-      - DATABASE_URL=postgres://app:app@postgres:5432/app?sslmode=disable
-      - REDIS_URL=redis://redis:6379
-
-  postgres:
-    image: postgres:18
-    environment:
-      - POSTGRES_USER=app
-      - POSTGRES_PASSWORD=app
-      - POSTGRES_DB=app
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:8
-    ports:
-      - "6379:6379"
-
-volumes:
-  postgres_data:
-```
+| 功能 | 匿名访客 | 登录用户 | 作者 | 管理员 |
+|------|----------|----------|------|--------|
+| 浏览首页 | 允许 | 允许 | 允许 | 允许 |
+| 阅读公开文章 | 允许 | 允许 | 允许 | 允许 |
+| 搜索文章 | 允许 | 允许 | 允许 | 允许 |
+| 查看评论 | 允许 | 允许 | 允许 | 允许 |
+| 发表留言 | 禁止 | 允许 | 允许 | 允许 |
+| 点赞收藏 | 禁止 | 允许 | 允许 | 允许 |
+| 创建文章 | 禁止 | 按权限 | 允许 | 允许 |
+| 编辑自己的文章 | 禁止 | 禁止 | 允许 | 允许 |
+| 删除任意评论 | 禁止 | 禁止 | 禁止 | 允许 |
+| 管理站点内容 | 禁止 | 禁止 | 禁止 | 允许 |
 
 ---
 
-## 9. 可扩展性设计
-
-### 9.1 模块化单体
-
-不要一开始就拆成大量微服务。推荐先使用模块化单体：
-
-```text
-auth 模块只处理认证
-post 模块只处理文章
-comment 模块只处理评论
-crawler 模块只处理抓取
-analytics 模块只处理埋点
-subscription 模块只处理订阅
-```
-
-模块之间通过接口调用，而不是到处互相直接访问数据库细节。
-
-### 9.2 数据库迁移
-
-所有表结构变化都必须写迁移文件：
-
-```text
-migrations/
-  000001_init.up.sql
-  000001_init.down.sql
-  000002_add_comments.up.sql
-  000002_add_comments.down.sql
-```
-
-### 9.3 后台任务
-
-爬虫、统计聚合、订阅推送不要放在 API 请求里同步执行。应该交给 Worker：
-
-```text
-API Server：处理用户请求
-Worker：处理慢任务、定时任务、聚合任务
-```
-
-### 9.4 事件表
-
-保留 `analytics_events` 和后续的 `domain_events`。这样以后可以做：
-
-1. 推荐系统。
-2. 用户增长分析。
-3. 内容质量分析。
-4. 风控与审计。
-5. 消息通知。
-
-### 9.5 搜索可替换
-
-第一版使用 PostgreSQL 搜索。后续搜索模块不要让业务代码直接依赖 PostgreSQL 细节，而是封装成：
-
-```go
-type SearchService interface {
-    SearchPosts(ctx context.Context, query string, opts SearchOptions) ([]PostSearchResult, error)
-}
-```
-
-这样以后可以平滑替换为 Meilisearch 或 Elasticsearch。
-
-### 9.6 文件存储可替换
-
-第一版可以不做复杂文件上传。后续需要上传图片时，通过统一 Storage 接口：
-
-```go
-type Storage interface {
-    Put(ctx context.Context, key string, r io.Reader) error
-    GetURL(ctx context.Context, key string) (string, error)
-}
-```
-
-本地开发用 MinIO，生产环境可以换 S3 或其他对象存储。
-
----
-
-## 10. 开发阶段规划
+## 12. 开发阶段规划
 
 ### Phase 0：项目骨架
 
-- 初始化 monorepo。
-- 建立 frontend、backend、docker-compose。
-- 建立 PostgreSQL 连接。
-- 建立迁移系统。
-- 建立基础日志与配置。
+- monorepo 初始化。
+- frontend、backend、docker-compose 建立。
+- PostgreSQL 连接。
+- 数据库迁移。
+- 基础日志、配置和健康检查。
 
-### Phase 1：用户系统
+### Phase 1：公开博客首页
+
+- 首页布局。
+- 精选文章区域。
+- 最新文章区域。
+- 关于我区域。
+- 标签和归档入口。
+- 不登录即可访问主要内容。
+
+### Phase 2：用户系统
 
 - 邮箱注册登录。
-- GitHub 登录。
 - Session / Cookie。
 - `/api/auth/me`。
+- 登录后导航状态。
 - 用户资料页。
 
-### Phase 2：博客核心
+### Phase 3：博客核心
 
-- 发帖。
-- Markdown 编辑。
-- 草稿保存。
-- 发布。
-- 首页信息流。
-- 帖子详情页。
+- 文章列表。
+- 文章详情。
+- Markdown 渲染。
+- 草稿和发布。
+- 编辑器页面。
+- 标签、摘要、封面图。
 
-### Phase 3：评论与行级标注
+### Phase 4：留言与互动
 
-- 底部评论。
+- 公开评论列表。
+- 登录后留言。
 - 评论回复。
-- Markdown block id。
-- 行级标注。
+- 点赞和收藏。
+- 未登录操作时跳转登录。
 
-### Phase 4：统计与互动
-
-- 阅读统计。
-- 点赞。
-- 用户仪表盘。
-- 埋点事件。
-
-### Phase 5：搜索与订阅
+### Phase 5：搜索与统计
 
 - PostgreSQL 全文搜索。
-- 用户订阅作者、标签、关键词。
-- 通知中心。
+- 归档页。
+- 阅读统计。
+- 热门文章。
 
-### Phase 6：爬虫与热点
+### Phase 6：个人内容扩展
 
-- GitHub Trending Worker。
-- 外部信息源表。
-- Trending 页面。
-- 把外部信息纳入信息流。
+- 登录用户创建自己的内容。
+- 用户公开主页增强。
+- 用户工作台。
+- 订阅、通知、外部信息源。
 
 ### Phase 7：工程化增强
 
@@ -997,119 +653,59 @@ type Storage interface {
 - API 集成测试。
 - CI。
 - 生产 Dockerfile。
-- Nginx / Caddy 部署。
-- 监控与错误报警。
+- Caddy / Nginx 部署。
+- 监控和错误报警。
 
 ---
 
-## 11. 推荐项目目录
-
-```text
-project-root/
-  design.md
-  docker-compose.yml
-  .env.example
-  README.md
-
-  frontend/
-    package.json
-    vite.config.ts
-    src/
-      app/
-      pages/
-      components/
-      features/
-        auth/
-        posts/
-        comments/
-        dashboard/
-        search/
-        subscriptions/
-        trending/
-      lib/
-      api/
-
-  backend/
-    go.mod
-    cmd/
-      api/
-        main.go
-      worker/
-        main.go
-    internal/
-      auth/
-      user/
-      post/
-      comment/
-      reaction/
-      search/
-      feed/
-      subscription/
-      crawler/
-      analytics/
-      notification/
-      platform/
-        config/
-        db/
-        http/
-        logger/
-    migrations/
-    sql/
-```
-
----
-
-## 12. 安全要求
+## 13. 安全要求
 
 1. 密码必须哈希存储。
 2. 登录 Cookie 使用 HttpOnly、Secure、SameSite。
-3. 所有写操作检查登录态。
-4. 用户只能修改自己的帖子和评论。
+3. 所有写操作必须检查登录态。
+4. 用户只能修改自己的文章、评论和资料，管理员除外。
 5. Markdown 渲染后的 HTML 必须消毒，防止 XSS。
 6. GitHub OAuth 使用 state 防 CSRF。
-7. API 请求需要限流，尤其是登录、注册、评论、埋点、爬虫触发。
-8. 后端不要信任前端传入的 user_id。
+7. 登录、注册、评论、阅读统计接口需要限流。
+8. 后端不要信任前端传入的 `user_id`。
 9. 敏感配置放入环境变量，不提交到 Git。
-10. 埋点中的 IP 建议 hash，不保存明文。
+10. 统计中的 IP 建议 hash，不保存明文。
 
 ---
 
-## 13. 第一版最小可行产品 MVP
+## 14. 第一版 MVP
 
-MVP 不要一次做完所有设想。建议第一版只完成：
+第一版目标是做出一个可公开访问、观感完整的个人博客：
 
-1. 邮箱登录。
-2. GitHub 登录。
-3. 发帖与 Markdown 编辑。
-4. 首页滚动信息流。
-5. 帖子详情页。
-6. 底部评论。
-7. 点赞。
-8. 阅读统计。
-9. 简单搜索。
-10. Docker Compose 本地启动。
+1. 漂亮的个人博客首页，占位内容可后续填充。
+2. 公开文章列表。
+3. 公开文章详情页。
+4. Markdown 内容展示。
+5. 邮箱登录和注册。
+6. 登录后才能留言。
+7. 登录后才能创建或编辑内容。
+8. 基础阅读统计。
+9. Docker Compose 本地启动。
 
 第二版再加入：
 
-1. 行级标注。
-2. 用户仪表盘增强。
-3. 订阅功能。
-4. GitHub Trending 爬虫。
-5. 通知中心。
-6. 埋点聚合分析。
+1. 点赞和收藏。
+2. 搜索和归档。
+3. 用户公开主页。
+4. 用户工作台。
+5. 订阅和通知。
+6. 外部信息源和热点内容。
 
 ---
 
-## 14. 总结
+## 15. 总结
 
-本项目的核心不是单个博客功能，而是一个长期可扩展的内容平台。第一阶段应该避免过度架构化，但必须从一开始做好模块边界、数据库迁移、后台任务、事件记录、搜索接口和 Docker 环境。
+这个项目应先从“好看的个人博客”开始，而不是从“完整社区平台”开始。公开内容必须足够顺畅：用户打开网站就能阅读、浏览和了解作者。登录系统作为互动和创作的安全边界存在，只在用户需要留言、点赞、收藏、订阅或创建自己的内容时出现。
 
 推荐路线：
 
 ```text
-先完成用户系统 + 发帖 + 信息流 + 评论
-再加入统计 + 搜索 + 仪表盘
-最后加入订阅 + 爬虫 + GitHub Trending + 行级标注增强
+先完成个人主页 + 公开文章阅读
+再加入登录 + 留言 + 创作
+最后扩展搜索 + 统计 + 用户内容 + 订阅和外部信息源
 ```
-
-这样既能快速做出可用版本，又不会把后续扩展空间堵死。
