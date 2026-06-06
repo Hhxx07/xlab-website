@@ -18,7 +18,7 @@ export default defineConfig({
     proxy: {
       '/api': {
         // 本地开发直接连 localhost，Docker 中连 api 容器
-        target: process.env.VITE_API_BASE_URL || 'http://localhost:8080',
+        target: process.env.VITE_API_BASE_URL || 'http://api:8080',
         changeOrigin: true,
         // 不重写路径，保持 /api/xxx → /api/xxx
       },

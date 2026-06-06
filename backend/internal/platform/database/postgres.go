@@ -9,8 +9,13 @@ package database
 
 import (
 	"context"
-	"fmt"
-	"time"
+    "fmt"
+    "os"
+    "path/filepath"
+    "sort"
+    "strconv"
+    "strings"
+    "time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -49,24 +54,114 @@ func ConnectPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error)
 
 // RunMigrations 执行数据库迁移（Up 方向）
 //
-// Phase 1 实现简单版本：读取 migrations 目录的 .up.sql 文件按序执行
-// 生产环境建议使用 golang-migrate 库，此处以简洁为主
+// 读取 migrations 目录下的 .up.sql 文件，按版本号排序执行
+// 已执行过的迁移会被跳过（通过 schema_migrations 表追踪）
 func RunMigrations(pool *pgxpool.Pool, migrationsDir string) error {
-	// 创建迁移版本追踪表（如果不存在）
-	_, err := pool.Exec(context.Background(), `
-		CREATE TABLE IF NOT EXISTS schema_migrations (
-			version BIGINT PRIMARY KEY,
-			dirty BOOLEAN NOT NULL DEFAULT FALSE
-		)
-	`)
-	if err != nil {
-		return fmt.Errorf("创建迁移追踪表失败: %w", err)
-	}
+    ctx := context.Background()
 
-	// Phase 1 简化：直接执行已知的迁移 SQL
-	// 后续 Phase 将改用 golang-migrate 库的 FileSource
-	// 当前通过 init.sql 中的 IF NOT EXISTS 保证幂等性
-	// 实际迁移文件在 migrations/ 目录中，可通过 migrate CLI 手动执行
+    // 1. 创建迁移版本追踪表（如果不存在）
+    _, err := pool.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            version BIGINT PRIMARY KEY,
+            dirty BOOLEAN NOT NULL DEFAULT FALSE
+        )
+    `)
+    if err != nil {
+        return fmt.Errorf("创建迁移追踪表失败: %w", err)
+    }
 
-	return nil
+    // 2. 扫描 migrations 目录下所有 .up.sql 文件
+    entries, err := os.ReadDir(migrationsDir)
+    if err != nil {
+        return fmt.Errorf("读取迁移目录失败: %w", err)
+    }
+
+    type migration struct {
+        version int64
+        path    string
+    }
+    var migrations []migration
+
+    for _, entry := range entries {
+        if entry.IsDir() {
+            continue
+        }
+        name := entry.Name()
+        // 匹配格式：NNNNNN_description.up.sql
+        if !strings.HasSuffix(name, ".up.sql") {
+            continue
+        }
+        // 提取版本号（前 6 位数字）
+        parts := strings.SplitN(name, "_", 2)
+        version, err := strconv.ParseInt(parts[0], 10, 64)
+        if err != nil {
+            continue
+        }
+        migrations = append(migrations, migration{
+            version: version,
+            path:    filepath.Join(migrationsDir, name),
+        })
+    }
+
+    // 按版本号排序
+    sort.Slice(migrations, func(i, j int) bool {
+        return migrations[i].version < migrations[j].version
+    })
+
+    // 3. 逐个执行迁移
+    for _, m := range migrations {
+        // 检查是否已执行
+        var exists bool
+        err := pool.QueryRow(ctx,
+            "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version = $1)", m.version,
+        ).Scan(&exists)
+        if err != nil {
+            return fmt.Errorf("检查迁移版本 %d 失败: %w", m.version, err)
+        }
+        if exists {
+            continue // 已执行，跳过
+        }
+
+        // 读取 SQL 文件
+        sqlBytes, err := os.ReadFile(m.path)
+        if err != nil {
+            return fmt.Errorf("读取迁移文件 %s 失败: %w", m.path, err)
+        }
+
+        // 在事务中执行迁移
+        tx, err := pool.Begin(ctx)
+        if err != nil {
+            return fmt.Errorf("开始迁移事务失败: %w", err)
+        }
+
+        // 标记为 dirty（正在执行中）
+        _, err = tx.Exec(ctx,
+            "INSERT INTO schema_migrations (version, dirty) VALUES ($1, TRUE)", m.version,
+        )
+        if err != nil {
+            tx.Rollback(ctx)
+            return fmt.Errorf("标记迁移 %d 开始失败: %w", m.version, err)
+        }
+
+        // 执行迁移 SQL
+        if _, err := tx.Exec(ctx, string(sqlBytes)); err != nil {
+            tx.Rollback(ctx)
+            return fmt.Errorf("执行迁移 %d (%s) 失败: %w", m.version, filepath.Base(m.path), err)
+        }
+
+        // 标记为完成
+        _, err = tx.Exec(ctx,
+            "UPDATE schema_migrations SET dirty = FALSE WHERE version = $1", m.version,
+        )
+        if err != nil {
+            tx.Rollback(ctx)
+            return fmt.Errorf("标记迁移 %d 完成失败: %w", m.version, err)
+        }
+
+        if err := tx.Commit(ctx); err != nil {
+            return fmt.Errorf("提交迁移 %d 失败: %w", m.version, err)
+        }
+    }
+
+    return nil
 }

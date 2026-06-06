@@ -12,7 +12,7 @@
 FROM golang:1.25-alpine AS dev
 
 # 安装 air 热重载工具
-RUN go install github.com/air-verse/air/v2@latest
+RUN go install github.com/air-verse/air@latest
 
 WORKDIR /app
 
