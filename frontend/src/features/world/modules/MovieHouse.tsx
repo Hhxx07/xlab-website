@@ -25,7 +25,7 @@ export default function MovieHouse({ position }: { position: [number, number, nu
           <meshStandardMaterial color="#2f354a" />
         </mesh>
       ))}
-      <HouseLabel position={[0, 2.55, 0]} label="电影" />
+      {/* <HouseLabel position={[0, 2.55, 0]} label="电影" /> */}
     </group>
   )
 }

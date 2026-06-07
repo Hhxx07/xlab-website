@@ -27,7 +27,7 @@ export default function KnowledgeHouse({ position }: { position: [number, number
         <coneGeometry args={[0.15, 0.34, 4]} />
         <meshStandardMaterial color="#313131" />
       </mesh>
-      <HouseLabel position={[0, 2.45, 0]} label="知识" />
+      {/* <HouseLabel position={[0, 2.45, 0]} label="知识" /> */}
     </group>
   )
 }

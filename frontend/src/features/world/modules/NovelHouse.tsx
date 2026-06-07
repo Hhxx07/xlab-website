@@ -23,7 +23,7 @@ export default function NovelHouse({ position }: { position: [number, number, nu
         <boxGeometry args={[0.42, 0.26, 0.06]} />
         <meshStandardMaterial color="#31343a" />
       </mesh>
-      <HouseLabel position={[0, 2.42, 0]} label="小说" />
+      {/* <HouseLabel position={[0, 2.42, 0]} label="小说" /> */}
     </group>
   )
 }

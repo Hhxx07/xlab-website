@@ -25,7 +25,7 @@ export default function SportHouse({ position }: { position: [number, number, nu
           <meshStandardMaterial color="#f43f5e" />
         </mesh>
       ))}
-      <HouseLabel position={[0, 2.5, 0]} label="体育" />
+      {/* <HouseLabel position={[0, 2.5, 0]} label="体育" /> */}
     </group>
   )
 }

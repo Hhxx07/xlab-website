@@ -19,7 +19,7 @@ export default function NewsBoard() {
         <boxGeometry args={[1.75, 0.22, 0.22]} />
         <meshStandardMaterial color="#d78d3f" />
       </mesh>
-      <HouseLabel position={[0, 2.05, 0]} label="新闻板" />
+      {/* <HouseLabel position={[0, 1.85, 0.12]} label="News" /> */}
     </group>
   )
 }

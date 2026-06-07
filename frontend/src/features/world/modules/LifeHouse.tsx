@@ -29,7 +29,7 @@ export default function LifeHouse({ position }: { position: [number, number, num
         <torusGeometry args={[0.26, 0.035, 6, 12]} />
         <meshStandardMaterial color="#39495e" />
       </mesh>
-      <HouseLabel position={[0, 2.55, 0]} label="生活" />
+      {/* <HouseLabel position={[0, 2.55, 0]} label="生活" /> */}
     </group>
   )
 }

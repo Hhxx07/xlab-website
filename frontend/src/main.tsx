@@ -16,10 +16,7 @@ import './index.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    {/* BrowserRouter — 启用客户端路由，使用 HTML5 History API */}
     <BrowserRouter>
       <App />
-    </BrowserRouter>
-  </StrictMode>,
+    </BrowserRouter>,
 )

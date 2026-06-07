@@ -1,8 +1,12 @@
 import { Canvas } from '@react-three/fiber'
-import { OrthographicCamera } from '@react-three/drei'
+import { OrthographicCamera, OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import type { MutableRefObject } from 'react'
 import type { MovementInput } from './utils/isoDirection'
 import WorldScene from './WorldScene'
+
+import { FREE_CAMERA } from '../../config/debug';
+
+// 调试模式改成自由相机
 
 const emptyControls: MutableRefObject<MovementInput> = {
   current: {
@@ -26,17 +30,43 @@ export default function WorldCanvas({
       gl={{
         antialias: true,
         alpha: false,
-        powerPreference: 'high-performance',
+        powerPreference: 'default',
       }}
       style={{ width: '100%', height: '100%', display: 'block' }}
     >
-      <OrthographicCamera
-        makeDefault
-        position={[8, 8, 8]}
-        zoom={preview ? 38 : 48}
-        near={0.1}
-        far={100}
-      />
+      <color attach="background" args={['#bae6fd']} />
+
+      {FREE_CAMERA ? ( 
+        <>
+          <PerspectiveCamera
+            makeDefault
+            position={[6, 6, 8]}
+            fov={50}
+            near={0.1}
+            far={1000}
+          />
+
+          <OrbitControls
+            makeDefault
+            target={[0, 0, 0]}
+            enableDamping
+            dampingFactor={0.08}
+            enablePan
+            enableZoom
+            enableRotate
+          />
+        </>
+      ) : (
+        <OrthographicCamera
+          makeDefault
+          position={[8, 8, 8]}
+          zoom={preview ? 38 : 48}
+          near={0.1}
+          far={100}
+          onUpdate={(self) => self.lookAt(0, 0, 0)}
+        />
+      )}
+
       <WorldScene controls={controls} preview={preview} />
     </Canvas>
   )
