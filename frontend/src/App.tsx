@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import GaussianPage from './pages/GaussianPage'
 import NotePage from './pages/NotePage'
 import ProfilePage from './pages/ProfilePage'
 import RegisterPage from './pages/RegisterPage'
@@ -45,6 +46,7 @@ export default function App() {
         />
       </Route>
       <Route path="/world" element={<WorldPage />} />
+      <Route path="/world/gaussian/:houseId" element={<GaussianPage />} />
     </Routes>
   )
 }

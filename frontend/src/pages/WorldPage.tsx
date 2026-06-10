@@ -15,7 +15,6 @@ export default function WorldPage() {
   const openNote = useWorldStore((state) => state.openNote)
   const openNews = useWorldStore((state) => state.openNews)
   const closeModal = useWorldStore((state) => state.closeModal)
-  const enterHouse = useWorldStore((state) => state.enterHouse)
 
   const handleAction = useCallback(() => {
     if (!activeHotspot) return
@@ -31,9 +30,12 @@ export default function WorldPage() {
     }
 
     if (activeHotspot.type === 'enter_house' && activeHotspot.module !== 'town') {
-      enterHouse(activeHotspot.module, activeHotspot.noteSlug)
+      const pos = useWorldStore.getState().playerPosition
+      navigate(`/world/gaussian/${activeHotspot.module}`, {
+        state: { returnPosition: pos },
+      })
     }
-  }, [activeHotspot, enterHouse, openNews, openNote])
+  }, [activeHotspot, navigate, openNews, openNote])
 
   const handleEscape = useCallback(() => {
     if (isNoteModalOpen || isNewsModalOpen) {
