@@ -35,7 +35,7 @@ export default function Sidebar({ onNavClick }: SidebarProps) {
           x·blog
         </p>
         <p className="mt-1 text-sm font-medium text-[var(--text-soft)]">
-          小地方
+          小地方挺舒服
         </p>
         <div className="mt-5 h-px bg-gradient-to-r from-transparent via-[var(--border-soft)] to-transparent" />
       </Link>

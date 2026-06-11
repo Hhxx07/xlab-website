@@ -9,10 +9,10 @@ type TrendingRepo = {
 
 const fallbackRepos: TrendingRepo[] = [
   {
-    name: 'open-source-starter',
-    description: 'A placeholder repository card shown when the crawler API is unavailable.',
+    name: '这是一个占位空白块',
+    description: '没有得到什么东西的时候你就会看到它。点击它就能自己上github看trending啦！',
     language: 'TypeScript',
-    url: 'https://github.com',
+    url: 'https://github.com/trending',
   },
 ]
 
@@ -47,10 +47,10 @@ export default function HotPage() {
             Trending
           </p>
           <h1 className="mt-2 text-4xl font-black tracking-[-0.04em] text-[var(--text-main)]">
-            热门资讯
+            HOT
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-muted)]">
-            自动聚合 GitHub 上近期热门的开源项目，作为极客资讯流入口。
+            GitHub Trending for you.
           </p>
         </div>
 

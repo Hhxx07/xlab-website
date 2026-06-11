@@ -133,7 +133,7 @@ function LatestArticles() {
           to="/hot"
           className="w-fit text-sm font-bold text-[var(--green-main)] transition-colors hover:text-[var(--green-deep)]"
         >
-          Trending →
+          Trending Now →
         </Link>
       </div>
 

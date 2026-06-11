@@ -183,9 +183,22 @@ func githubTrendingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	items := []repo{}
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, "https://api.github.com/search/repositories?q=stars:%3E50000&sort=stars&order=desc&per_page=10", nil)
+
+	// 使用独立的 context（带超时），避免被客户端断开影响
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/search/repositories?q=stars:%3E50000&sort=stars&order=desc&per_page=10", nil)
 	if err == nil {
+		// GitHub API 强制要求 User-Agent，否则返回 403
 		req.Header.Set("Accept", "application/vnd.github+json")
+		req.Header.Set("User-Agent", "xlab-trending/1.0")
+
+		// 如果有 GitHub Token，可以带上以提升速率限制（60→5000次/小时）
+		if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+
 		resp, err := http.DefaultClient.Do(req)
 		if err == nil && resp.Body != nil {
 			defer resp.Body.Close()
