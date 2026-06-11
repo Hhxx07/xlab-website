@@ -1,6 +1,6 @@
-import { Html } from '@react-three/drei'
+import { Html } from '@react-three/drei' // 导入三维世界的html库
 
-export default function HouseLabel({
+export default function HouseLabel({ // 创建类型，同时绑定两个变量；声明两个变量的类型 本质上是一个函数，在react里面当做一个组件使用，生成对应的3d模型
   position,
   label,
 }: {
