@@ -2,6 +2,7 @@
 title: 宿舍生活介绍
 module: life
 summary: 普通四人寝室、桌面、书架和生活节奏。
+hot: true
 ---
 
 # 宿舍生活介绍

@@ -2,6 +2,7 @@
 title: 游戏体验笔记
 module: game
 summary: 原创东方神话风像素英雄雕像对应的游戏体验记录。
+hot: true
 ---
 
 # 游戏体验笔记

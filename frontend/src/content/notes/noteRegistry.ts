@@ -17,6 +17,8 @@ export type NoteDocument = {
   summary: string
   body: string
   raw: string
+  cover?: string
+  hot?: boolean
 }
 
 const rawNotes: Record<string, string> = {
@@ -66,5 +68,7 @@ function parseNote(slug: string, raw: string): NoteDocument {
     summary: meta.summary || '',
     body,
     raw,
+    cover: meta.cover || undefined,
+    hot: meta.hot === 'true',
   }
 }

@@ -2,6 +2,7 @@
 title: 数理知识
 module: knowledge
 summary: 微积分、线性代数、物理数学方法等内容整理。
+hot: true
 ---
 
 # 数理知识
