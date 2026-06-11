@@ -3,8 +3,26 @@
 @tailwind utilities;
 
 :root {
-  color: #0f172a;
-  background: #ffffff;
+  --bg-page: #f8f5ef;
+  --bg-card: #fffdf8;
+  --bg-card-soft: #fdf8ed;
+  --text-main: #1f2a37;
+  --text-muted: #6b7280;
+  --text-soft: #8a94a3;
+  --green-main: #4f6f52;
+  --green-deep: #314832;
+  --green-soft: #e8f1e6;
+  --brown-main: #9a6a3a;
+  --brown-soft: #f3e6d3;
+  --blue-soft: #e8f0ff;
+  --purple-soft: #eee9ff;
+  --orange-soft: #fff0dc;
+  --border-soft: rgba(31, 42, 55, 0.08);
+  --shadow-card: 0 14px 40px rgba(39, 48, 38, 0.08);
+  --shadow-card-hover: 0 20px 48px rgba(39, 48, 38, 0.12);
+  --radius-card: 22px;
+  color: var(--text-main);
+  background: var(--bg-page);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -17,14 +35,24 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #ffffff;
+  background: var(--bg-page);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background-color: #dbeafe;
-  color: #0f172a;
+  background-color: var(--green-soft);
+  color: var(--green-deep);
 }
 
 @layer base {
@@ -37,6 +65,30 @@ body {
 @layer components {
   .card {
     @apply rounded-md border border-slate-200 bg-white shadow-sm;
+  }
+
+  .page-slide-in {
+    animation: pageSlideIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .warm-card {
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-card);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .warm-card-hover {
+    transition:
+      transform 220ms ease,
+      box-shadow 220ms ease,
+      border-color 220ms ease,
+      background-color 220ms ease;
+  }
+
+  .warm-card-hover:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-card-hover);
   }
 
   .btn-primary {
@@ -71,6 +123,17 @@ body {
     transform: translateX(-100%);
   }
   to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
     transform: translateX(0);
   }
 }

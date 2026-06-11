@@ -94,7 +94,7 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
   const [loading, setLoading] = useState(true)
   const [progress, setProgress] = useState(0)
   const [loadingText, setLoadingText] = useState('INITIALIZING SYSTEM')
-  const [tutorialText, setTutorialText] = useState('[ WASD ] TO FLY & EXPLORE')
+  const [tutorialText] = useState('[ WASD ] TO FLY & EXPLORE')
   const [quote, setQuote] = useState('"Light is the first of painters."')
   const [uiHidden, setUiHidden] = useState(false)
   const [lang, setLang] = useState<'zh' | 'en'>('zh')
@@ -463,7 +463,6 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
       const baseGeo = new THREE.PlaneGeometry(1, 1)
       const geo = new THREE.InstancedBufferGeometry()
       geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 50)
-      geo.frustumCulled = false
       geo.index = baseGeo.index
       geo.attributes.position = baseGeo.attributes.position
       geo.attributes.uv = baseGeo.attributes.uv
@@ -809,7 +808,7 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0))
       renderer.toneMapping = THREE.ACESFilmicToneMapping
       renderer.toneMappingExposure = 1.0
-      container.appendChild(renderer.domElement)
+      containerRef.current?.appendChild(renderer.domElement)
 
       // 事件绑定
       window.addEventListener('resize', onResize)

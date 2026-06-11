@@ -1,74 +1,13 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
-// ===========================================================================
-// 侧边栏导航配置
-// ===========================================================================
-
 const NAV_ITEMS = [
-  { label: '主页', path: '/', icon: HomeIcon },
-  { label: '热门', path: '/hot', icon: HotIcon },
-  { label: '学习', path: '/study', icon: StudyIcon },
-  { label: '有趣', path: '/fun', icon: FunIcon },
-  { label: '生活', path: '/life', icon: LifeIcon },
+  { label: '主页', path: '/', subLabel: 'Main Page', icon: HomeIcon },
+  { label: '热门', path: '/hot', subLabel: 'Trending', icon: HotIcon },
+  { label: '学习', path: '/study', subLabel: 'Study', icon: StudyIcon },
+  { label: '有趣', path: '/fun', subLabel: 'Fun', icon: FunIcon },
+  { label: '生活', path: '/life', subLabel: 'Life', icon: LifeIcon },
 ] as const
-
-// ===========================================================================
-// 简易 SVG 图标（线框风格，与参考网站一致）
-// ===========================================================================
-
-function HomeIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" />
-      <path d="M9 21V12h6v9" />
-    </svg>
-  )
-}
-
-function HotIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2c-2 4-5 7-5 12a5 5 0 0 0 10 0c0-5-3-8-5-12z" />
-      <path d="M12 11c-1 2-2 4-2 6a2 2 0 0 0 4 0c0-2-1-4-2-6z" opacity="0.5" />
-    </svg>
-  )
-}
-
-function StudyIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15z" />
-      <path d="M8 7h8" />
-      <path d="M8 11h6" />
-    </svg>
-  )
-}
-
-function FunIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="6" width="20" height="12" rx="2" />
-      <path d="M8 12h2M14 12h2M12 10v4" />
-      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-    </svg>
-  )
-}
-
-function LifeIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M7 4.5C4.5 6 3 9 3 12c0 5 4 9 9 9s9-4 9-9c0-3-1.5-6-4-7.5" />
-      <path d="M12 3v10" />
-      <path d="M12 13a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
-    </svg>
-  )
-}
-
-// ===========================================================================
-// 组件
-// ===========================================================================
 
 interface SidebarProps {
   onNavClick?: () => void
@@ -90,66 +29,133 @@ export default function Sidebar({ onNavClick }: SidebarProps) {
   }
 
   return (
-    <aside className="flex h-full flex-col bg-warm-100">
-      {/* ---- Logo ---- */}
-      <div className="px-6 pt-8 pb-6">
-        <Link to="/" className="inline-block text-2xl font-bold tracking-tight text-slate-800" onClick={onNavClick}>
-          x<span className="text-warm-500">·</span>blog
-        </Link>
-      </div>
+    <aside className="flex h-full flex-col rounded-[28px] border border-white/70 bg-[rgba(255,253,248,0.86)] px-4 py-5 shadow-[0_18px_60px_rgba(52,45,32,0.10)] backdrop-blur-xl">
+      <Link to="/" className="group block px-3 pb-5 pt-2" onClick={onNavClick}>
+        <p className="text-3xl font-black tracking-[-0.04em] text-[var(--text-main)]">
+          一隅
+        </p>
+        <p className="mt-1 text-sm font-medium text-[var(--text-soft)]">
+          Sycamore&apos;s blog
+        </p>
+        <div className="mt-5 h-px bg-gradient-to-r from-transparent via-[var(--border-soft)] to-transparent" />
+      </Link>
 
-      {/* ---- 导航菜单 ---- */}
-      <nav className="flex-1 space-y-1 px-3">
-        {NAV_ITEMS.map(({ label, path, icon: Icon }) => {
+      <nav className="flex-1 space-y-2 px-1">
+        {NAV_ITEMS.map(({ label, subLabel, path, icon: Icon }) => {
           const active = isActive(path)
           return (
             <Link
               key={path}
               to={path}
               onClick={onNavClick}
-              className={`flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`group relative flex items-center gap-3 rounded-[14px] px-4 py-3 text-sm transition-all ${
                 active
-                  ? 'bg-warm-200/70 text-warm-700'
-                  : 'text-slate-500 hover:bg-warm-200/40 hover:text-slate-700'
+                  ? 'bg-[var(--green-soft)] text-[var(--green-deep)] shadow-sm'
+                  : 'text-slate-500 hover:bg-white/80 hover:text-[var(--text-main)]'
               }`}
             >
-              <Icon />
-              <span>{label}</span>
+              {active && (
+                <span className="absolute left-2 top-1/2 h-6 w-1 -translate-y-1/2 rounded-full bg-[var(--green-main)]" />
+              )}
+              <span
+                className={`ml-1 flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
+                  active
+                    ? 'bg-white/80 text-[var(--green-main)]'
+                    : 'bg-white/50 text-slate-400 group-hover:text-[var(--green-main)]'
+                }`}
+              >
+                <Icon />
+              </span>
+              <span className="min-w-0">
+                <span className={`block ${active ? 'font-bold' : 'font-semibold'}`}>
+                  {label}
+                </span>
+                <span className="mt-0.5 block text-xs text-slate-400">{subLabel}</span>
+              </span>
             </Link>
           )
         })}
       </nav>
 
-      {/* ---- 底部登录区 ---- */}
-      <div className="border-t border-warm-200 px-4 py-4">
+      <div className="mt-5 rounded-[20px] border border-[var(--border-soft)] bg-white/70 p-4">
         {isAuthenticated && user ? (
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warm-300 text-sm font-semibold text-warm-800">
-              {user.username.charAt(0).toUpperCase()}
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brown-soft)] text-sm font-bold text-[var(--brown-main)]">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-[var(--text-main)]">{user.username}</p>
+                <p className="text-xs text-[var(--text-soft)]">阅读记录已同步</p>
+              </div>
             </div>
-            <span className="flex-1 truncate text-sm font-medium text-slate-700">{user.username}</span>
             <button
               onClick={handleLogout}
-              className="rounded-full px-3 py-1 text-xs text-slate-400 transition-colors hover:bg-warm-200/50 hover:text-slate-600"
+              className="mt-4 w-full rounded-full bg-[var(--bg-page)] px-4 py-2 text-sm font-semibold text-slate-500 transition-colors hover:bg-[var(--brown-soft)] hover:text-[var(--brown-main)]"
             >
-              退出
+              退出登录
             </button>
           </div>
         ) : (
-          <Link
-            to="/login"
-            onClick={onNavClick}
-            className="flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-warm-200/40 hover:text-slate-700"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-              <polyline points="10 17 15 12 10 7" />
-              <line x1="15" y1="12" x2="3" y2="12" />
-            </svg>
-            <span>登录</span>
-          </Link>
+          <div>
+            <p className="text-sm font-bold text-[var(--text-main)]">未登录</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-soft)]">
+              登录后同步阅读记录，后续可留言和创作。
+            </p>
+            <Link
+              to="/login"
+              onClick={onNavClick}
+              className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[var(--green-main)] px-4 py-2.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(79,111,82,0.22)] transition-all hover:-translate-y-0.5 hover:bg-[var(--green-deep)]"
+            >
+              登录
+            </Link>
+          </div>
         )}
       </div>
     </aside>
+  )
+}
+
+function HomeIcon() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 10.2 12 3l9 7.2V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />
+    </svg>
+  )
+}
+
+function HotIcon() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3c-2.2 3.2-5 6.1-5 10.3A5 5 0 0 0 12 18a5 5 0 0 0 5-4.7C17 9.1 14.2 6.2 12 3Z" />
+      <path d="M12 12c-.9 1.3-1.5 2.2-1.5 3.1a1.5 1.5 0 0 0 3 0c0-.9-.6-1.8-1.5-3.1Z" />
+    </svg>
+  )
+}
+
+function StudyIcon() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 19.5A2.5 2.5 0 0 1 7.5 17H20" />
+      <path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v20H7.5A2.5 2.5 0 0 1 5 19.5z" />
+      <path d="M9 7h7M9 11h5" />
+    </svg>
+  )
+}
+
+function FunIcon() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="7" width="18" height="11" rx="3" />
+      <path d="M8 12h3M9.5 10.5v3M15 11.5h.01M17.5 13.5h.01" />
+    </svg>
+  )
+}
+
+function LifeIcon() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 21s7-4.5 7-11a4 4 0 0 0-7-2.65A4 4 0 0 0 5 10c0 6.5 7 11 7 11Z" />
+    </svg>
   )
 }

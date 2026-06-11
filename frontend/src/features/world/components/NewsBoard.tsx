@@ -1,5 +1,3 @@
-import HouseLabel from './HouseLabel'
-
 export default function NewsBoard() {
   return (
     <group position={[0, 0, 2.1]}>

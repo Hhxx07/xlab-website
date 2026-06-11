@@ -1,5 +1,3 @@
-import HouseLabel from '../components/HouseLabel'
-
 export default function KnowledgeHouse({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>

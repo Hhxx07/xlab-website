@@ -1,58 +1,43 @@
 import { Link } from 'react-router-dom'
 import type { NoteDocument } from '../content/notes/noteRegistry'
-import { MODULE_BADGE_COLORS, MODULE_LABELS, PLACEHOLDER_GRADIENTS } from '../lib/blogUtils'
-
-// ===========================================================================
-// 文章预览卡片组件
-// ===========================================================================
+import { MODULE_ACCENT_COLORS, MODULE_BADGE_COLORS, MODULE_LABELS } from '../lib/blogUtils'
 
 interface BlogCardProps {
   note: NoteDocument
+  meta?: string
 }
 
-export default function BlogCard({ note }: BlogCardProps) {
-  const badgeColor = MODULE_BADGE_COLORS[note.module] ?? 'bg-slate-50 text-slate-600'
+export default function BlogCard({ note, meta = '2026.06 · 6 min read' }: BlogCardProps) {
+  const badgeColor = MODULE_BADGE_COLORS[note.module] ?? 'bg-slate-100 text-slate-600'
   const label = MODULE_LABELS[note.module] ?? note.module
-  const gradient = PLACEHOLDER_GRADIENTS[note.module] ?? 'linear-gradient(135deg, #e2e8f0, #cbd5e1)'
+  const accent = MODULE_ACCENT_COLORS[note.module] ?? '#9ca3af'
 
   return (
     <Link
       to={`/post/${note.slug}`}
-      className="group block overflow-hidden rounded-xl border border-slate-200/60 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+      className="warm-card warm-card-hover group relative block min-h-[248px] overflow-hidden p-6"
     >
-      {/* ---- 封面区域 ---- */}
-      <div className="relative h-40 overflow-hidden">
-        {note.cover ? (
-          <img
-            src={note.cover}
-            alt={note.title}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div
-            className="h-full w-full"
-            style={{ background: gradient }}
-          />
-        )}
-        {/* 模块徽章 */}
-        <span
-          className={`absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeColor}`}
-        >
+      <span
+        className="absolute right-6 top-0 h-14 w-7 rounded-b-full opacity-80"
+        style={{ backgroundColor: accent }}
+      />
+      <div className="flex items-center justify-between gap-4">
+        <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${badgeColor}`}>
           {label}
         </span>
+        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
       </div>
 
-      {/* ---- 内容区 ---- */}
-      <div className="p-4">
-        <h3 className="text-base font-semibold leading-snug text-slate-800 line-clamp-2 group-hover:text-warm-600 transition-colors">
-          {note.title}
-        </h3>
-        {note.summary && (
-          <p className="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">
-            {note.summary}
-          </p>
-        )}
+      <h3 className="mt-6 text-xl font-extrabold leading-snug tracking-[-0.02em] text-[var(--text-main)] transition-colors group-hover:text-[var(--green-deep)]">
+        {note.title}
+      </h3>
+      <p className="mt-4 line-clamp-2 text-sm leading-7 text-[var(--text-muted)]">
+        {note.summary || '这里会记录一段学习、工程、阅读或生活里的片段。'}
+      </p>
+
+      <div className="mt-8 flex items-center justify-between border-t border-[var(--border-soft)] pt-4 text-xs font-medium text-[var(--text-soft)]">
+        <span>{meta}</span>
+        <span>阅读 →</span>
       </div>
     </Link>
   )

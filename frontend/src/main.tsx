@@ -9,7 +9,6 @@
 // 认证恢复：在 App 组件挂载时自动调用 fetchMe() 恢复 session
 // ===========================================================================
 
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
