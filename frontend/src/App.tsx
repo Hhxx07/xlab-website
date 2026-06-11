@@ -8,6 +8,7 @@ import StudyPage from './pages/blog/StudyPage'
 import FunPage from './pages/blog/FunPage'
 import LifePage from './pages/blog/LifePage'
 import ArticleDetailPage from './pages/blog/ArticleDetailPage'
+import EditorPage from './pages/blog/EditorPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="study" element={<StudyPage />} />
         <Route path="fun" element={<FunPage />} />
         <Route path="life" element={<LifePage />} />
+        <Route path="editor" element={<EditorPage />} />
         <Route path="post/*" element={<ArticleDetailPage />} />
       </Route>
 

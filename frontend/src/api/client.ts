@@ -83,6 +83,18 @@ async function request<T>(
 // ---------------------------------------------------------------------------
 
 export const authApi = {
+  requestMagicLink: (data: { email: string }) =>
+    request<{ message: string; dev_login_url?: string }>('/auth/magic-link/request', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  verifyMagicLink: (token: string) =>
+    request<{ user: import('../types').User }>('/auth/magic-link/verify', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    }),
+
   /** 邮箱注册 */
   register: (data: { email: string; username: string; password: string }) =>
     request<{ user: import('../types').User }>('/auth/register', {

@@ -40,6 +40,13 @@ type Config struct {
 
 	// 前端地址（用于 OAuth 回调后的跳转）
 	FrontendURL string
+
+	// SMTP 邮件配置（生产环境用于 Magic Link 外发）
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUser     string
+	SMTPPassword string
+	SMTPFrom     string
 }
 
 // Load 从环境变量加载配置，缺失时使用合理的开发默认值
@@ -55,6 +62,11 @@ func Load() *Config {
 		GitHubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
 		GitHubRedirectURI:  getEnv("GITHUB_REDIRECT_URI", "http://localhost:8080/api/auth/github/callback"),
 		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
+		SMTPHost:           getEnv("SMTP_HOST", ""),
+		SMTPPort:           getEnvInt("SMTP_PORT", 587),
+		SMTPUser:           getEnv("SMTP_USER", ""),
+		SMTPPassword:       getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:           getEnv("SMTP_FROM", ""),
 	}
 }
 

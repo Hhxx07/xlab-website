@@ -8,13 +8,13 @@
 //   4. 构造 HTTP 响应
 // ===========================================================================
 
-
 package auth
 
 import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/xlab-backend/internal/platform/config"
 )
@@ -172,6 +172,49 @@ func (h *Handler) GitHubCallback(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 // writeJSON 写入 JSON 响应
+func (h *Handler) RequestMagicLink(w http.ResponseWriter, r *http.Request) {
+	var input MagicLinkRequestInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "请求格式错误")
+		return
+	}
+
+	result, err := h.svc.RequestMagicLink(r.Context(), input)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) VerifyMagicLink(w http.ResponseWriter, r *http.Request) {
+	token := strings.TrimSpace(r.URL.Query().Get("token"))
+	if token == "" {
+		var input struct {
+			Token string `json:"token"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&input)
+		token = strings.TrimSpace(input.Token)
+	}
+
+	result, err := h.svc.VerifyMagicLink(r.Context(), token)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	w.Header().Set("Set-Cookie", result.SetCookie)
+	if r.Method == http.MethodGet {
+		http.Redirect(w, r, h.cfg.FrontendURL, http.StatusFound)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"user": sanitizeUser(result.User),
+	})
+}
+
 func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)

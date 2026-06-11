@@ -16,6 +16,9 @@ tmp/
 *.test
 *.out
 go.sum
+.gocache
+.gocache/
+*.go.*
 
 # 环境变量（生产机密密）
 .env

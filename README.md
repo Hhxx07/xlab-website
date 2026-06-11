@@ -1,24 +1,26 @@
-# XLab
+# x·blog
 
-Notion-style personal homepage plus a 3D voxel town entrance for notes, posts, and personal content.
+一个响应式个人博客与极客资讯系统。首页以暖米色、藏青蓝和自然草木色为主，公开展示个人文章、分类入口和 3D 知识小镇入口；登录只在留言、创作和管理员发布等动作发生时需要。
 
-The current frontend MVP includes:
+## 当前功能
 
-- Public homepage at `/`
-- Fullscreen 3D voxel town at `/world`
-- Markdown note pages at `/notes/*`
-- Six content modules: knowledge, game, life, movie, novel, sport
-- WASD / arrow-key player movement
-- `E` interaction prompts and Markdown-style modal notes
-- Login kept only for actions such as commenting, liking, writing, and admin work
+- 个人博客首页：养神小狗 Hero、最新文章、探索角落、3D 小镇入口
+- 左侧悬浮岛 Sidebar：Main Page、Trending、Study、Fun、Life、Login
+- Study / Fun / Life：文章卡片网格，Fun 支持 Novels / Games / Movies tabs
+- Trending：后端接口获取 GitHub 热门仓库信息，前端以信息流卡片展示
+- Editor：管理员可访问的 Milkdown Markdown 所见即所得编辑器
+- Auth：邮箱 Magic Link 无密码登录；开发环境不发邮件，直接在后端控制台打印登录链接
+- 3D World：保留 `/world` 入口，并继续作为知识小镇模块
+- 文章封面目录：`frontend/public/assets/covers/`
 
-## Tech Stack
+## 技术栈
 
 | Layer | Tech |
 | --- | --- |
 | Frontend | React 19, TypeScript, Vite |
+| UI | Tailwind CSS, CSS variables |
+| Editor | Milkdown / Crepe |
 | 3D | three, @react-three/fiber, @react-three/drei |
-| Styling | Tailwind CSS |
 | State | Zustand |
 | Routing | React Router |
 | Backend | Go 1.25, chi |
@@ -26,81 +28,53 @@ The current frontend MVP includes:
 | Cache / Queue | Redis 8 |
 | Dev Env | Docker Compose |
 
-## Project Structure
+## 目录
 
 ```text
 .
-├─ design.md
-├─ docker-compose.yml
-├─ README.md
-├─ frontend/
-│  ├─ Dockerfile
-│  ├─ package.json
-│  ├─ vite.config.ts
-│  └─ src/
-│     ├─ App.tsx
-│     ├─ pages/
-│     │  ├─ HomePage.tsx
-│     │  ├─ WorldPage.tsx
-│     │  ├─ NotePage.tsx
-│     │  ├─ LoginPage.tsx
-│     │  ├─ RegisterPage.tsx
-│     │  └─ ProfilePage.tsx
-│     ├─ features/world/
-│     │  ├─ WorldCanvas.tsx
-│     │  ├─ WorldScene.tsx
-│     │  ├─ Player.tsx
-│     │  ├─ CameraRig.tsx
-│     │  ├─ components/
-│     │  ├─ modules/
-│     │  ├─ controls/
-│     │  ├─ data/
-│     │  ├─ store/
-│     │  └─ utils/
-│     └─ content/notes/
-└─ backend/
-   ├─ Dockerfile
-   ├─ cmd/
-   ├─ internal/
-   └─ migrations/
+├── docker-compose.yml
+├── README.md
+├── frontend/
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── public/
+│   │   └── assets/covers/
+│   └── src/
+│       ├── components/
+│       ├── pages/
+│       └── features/world/
+└── backend/
+    ├── Dockerfile
+    ├── cmd/api/
+    ├── internal/
+    └── migrations/
 ```
 
-## Quick Start
+## 启动方式
 
-### Option 1: Full Docker Development
+### 方式 1：Docker 全量启动
 
-Use this when you want frontend, backend, PostgreSQL, and Redis running together.
+适合一次性启动 frontend、backend、PostgreSQL、Redis。
 
 ```bash
 docker compose up --build
 ```
 
-Open:
+打开：
 
 - Frontend: http://localhost:5173
-- 3D world: http://localhost:5173/world
 - API health: http://localhost:8080/api/health
-- PostgreSQL: `localhost:5432`
-- Redis: `localhost:6379`
+- 3D world: http://localhost:5173/world
 
-Useful commands:
+查看 Magic Link 开发登录链接：
 
 ```bash
-docker compose logs -f frontend
 docker compose logs -f api
-docker compose down
 ```
 
-If dependencies changed, rebuild the frontend container:
+### 方式 2：Docker 数据库 + 本地前后端
 
-```bash
-docker compose build frontend
-docker compose up frontend
-```
-
-### Option 2: Docker Databases + Local Frontend / Backend
-
-Use this for the fastest frontend debugging loop.
+适合日常开发调试。
 
 Terminal 1:
 
@@ -108,103 +82,64 @@ Terminal 1:
 docker compose up -d postgres redis
 ```
 
-Terminal 2, backend:
+Terminal 2:
 
 ```bash
 cd backend
 go run ./cmd/api
 ```
 
-Terminal 3, frontend:
+Terminal 3:
 
 ```bash
 cd frontend
 npm install
-npm run dev
-```
-
-Open:
-
-- http://localhost:5173
-- http://localhost:5173/world
-- http://localhost:5173/notes/knowledge/math
-
-### Option 3: Frontend Only
-
-Use this when you only need the homepage and 3D prototype. Auth API calls may fail until the backend is running, but public routes and the 3D world still load.
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## Debugging Notes
-
-### Vite inside Docker
-
-The frontend container listens on `0.0.0.0:5173`. Docker Compose also enables polling:
-
-```yaml
-CHOKIDAR_USEPOLLING: "true"
-WATCHPACK_POLLING: "true"
-```
-
-This makes hot reload more reliable on Windows bind mounts.
-
-### PostgreSQL 18 Volume Layout
-
-PostgreSQL 18 Docker images expect the volume to be mounted at:
-
-```text
-/var/lib/postgresql
-```
-
-This project uses the `postgres18_data` volume for that reason. If you previously ran an older compose file that mounted `/var/lib/postgresql/data`, recreate the containers after pulling this change:
-
-```bash
-docker compose down
-docker compose up --build
-```
-
-If you intentionally need to reset local development data, remove the volume as well:
-
-```bash
-docker compose down -v
-```
-
-### API Proxy
-
-Vite proxies `/api` to:
-
-```text
-VITE_API_BASE_URL=http://api:8080
-```
-
-When running frontend locally outside Docker, the fallback target in `vite.config.ts` is still `http://api:8080`; if you need local API proxying, start Vite like this:
-
-```bash
-cd frontend
 $env:VITE_API_BASE_URL="http://localhost:8080"
 npm run dev
 ```
 
-PowerShell syntax is shown above. In bash:
+本地登录调试：在登录页输入邮箱后，后端终端会输出 `[MAGIC LINK DEV] ...` 链接，浏览器打开该链接即可完成登录。
+
+### 方式 3：仅前端
+
+公开页面可以启动，登录、Trending 和需要 API 的功能会依赖后端。
 
 ```bash
-VITE_API_BASE_URL=http://localhost:8080 npm run dev
+cd frontend
+npm install
+npm run dev
 ```
 
-### 3D World Controls
+## 环境变量
 
-On `/world`:
+Docker Compose 已提供开发默认值。生产环境发送 Magic Link 邮件时需要配置：
 
-- `WASD` / arrow keys: move
-- `E`: interact with the nearest hotspot
-- `Esc`: close modal; if no modal is open, return to homepage
-- `Enter`: open the current note as a full page when the modal is open
+```text
+APP_ENV=production
+FRONTEND_URL=https://your-domain.com
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-user
+SMTP_PASSWORD=your-password
+SMTP_FROM=hello@example.com
+```
 
-## Validation
+开发环境保持 `APP_ENV=development` 时不会发送邮件，只会在后端控制台输出登录链接。
+
+## 常用路由
+
+| Route | Description |
+| --- | --- |
+| `/` | 个人博客首页 |
+| `/hot` | GitHub Trending 信息流 |
+| `/study` | 学习文章 |
+| `/fun` | 娱乐内容，含 Novels / Games / Movies tabs |
+| `/life` | 生活文章 |
+| `/editor` | 管理员 Markdown 编辑器 |
+| `/world` | 3D 知识小镇 |
+| `/login` | Magic Link 登录 |
+
+## 验证
 
 Frontend build:
 
@@ -220,77 +155,14 @@ cd backend
 go build ./...
 ```
 
-Full Docker smoke test:
+Docker smoke test:
 
 ```bash
 docker compose up --build
 ```
 
-Then verify:
+## 备注
 
-```bash
-curl http://localhost:8080/api/health
-```
-
-## Adding a New House
-
-1. Add a module entry in `frontend/src/features/world/data/worldModules.ts`.
-2. Create a new component under `frontend/src/features/world/modules/`.
-3. Register the component in `moduleComponents` inside `WorldScene.tsx`.
-4. Add one or more hotspots in `frontend/src/features/world/data/hotspots.ts`.
-5. Add Markdown content under `frontend/src/content/notes/`.
-6. Register the Markdown file in `frontend/src/content/notes/noteRegistry.ts`.
-
-## Replacing Geometry with GLB Models
-
-Each house is isolated in its own component, for example:
-
-```text
-frontend/src/features/world/modules/KnowledgeHouse.tsx
-```
-
-To replace a procedural house:
-
-1. Put the model under `frontend/public/models/knowledge-house.glb`.
-2. Use `useGLTF('/models/knowledge-house.glb')` inside the house component.
-3. Keep the outer `<group position={position}>`.
-4. Keep `HouseLabel` or replace it with a better label.
-5. Do not move hotspot coordinates unless the model footprint changes.
-
-The interaction system is data-driven, so replacing visuals should not require changing modal or keyboard logic.
-
-## Common Commands
-
-```bash
-# Frontend
-cd frontend
-npm install
-npm run dev
-npm run build
-
-# Backend
-cd backend
-go run ./cmd/api
-go build ./...
-
-# Docker
-docker compose up --build
-docker compose logs -f frontend
-docker compose logs -f api
-docker compose down
-```
-
-## Current MVP Routes
-
-| Route | Description |
-| --- | --- |
-| `/` | Notion-style personal homepage with 3D world preview |
-| `/world` | Fullscreen interactive 3D voxel town |
-| `/notes/knowledge/math` | Example Markdown note page |
-| `/login` | Login |
-| `/register` | Register |
-| `/profile` | Profile page |
-
-## License
-
-MIT
+- 文章封面统一放在 `frontend/public/assets/covers/`。
+- Trending 接口会请求 GitHub Search API；网络不可用时后端会返回本地占位数据，保证页面能正常渲染。
+- 发布接口仍可继续扩展；当前编辑器页面已完成 UI 与 Milkdown 接入，并保留管理员权限门槛。

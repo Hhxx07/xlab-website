@@ -21,7 +21,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/smtp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -50,13 +52,20 @@ var (
 
 // Service 认证服务
 type Service struct {
-	repo *Repository
-	cfg  *config.Config
+	repo       *Repository
+	cfg        *config.Config
+	magicLinks map[string]magicLinkEntry
+	mu         sync.Mutex
 }
 
 // NewService 创建认证服务实例
 func NewService(repo *Repository, cfg *config.Config) *Service {
-	return &Service{repo: repo, cfg: cfg}
+	return &Service{repo: repo, cfg: cfg, magicLinks: make(map[string]magicLinkEntry)}
+}
+
+type magicLinkEntry struct {
+	Email     string
+	ExpiresAt time.Time
 }
 
 // ---------------------------------------------------------------------------
@@ -211,6 +220,122 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginResult, er
 
 // Logout 处理登出
 // 通过 token hash 查找并删除对应 session
+type MagicLinkRequestInput struct {
+	Email string `json:"email"`
+}
+
+type MagicLinkRequestResult struct {
+	Message     string `json:"message"`
+	DevLoginURL string `json:"dev_login_url,omitempty"`
+}
+
+func (s *Service) RequestMagicLink(_ context.Context, input MagicLinkRequestInput) (*MagicLinkRequestResult, error) {
+	email := strings.TrimSpace(strings.ToLower(input.Email))
+	if email == "" || !strings.Contains(email, "@") {
+		return nil, fmt.Errorf("请输入有效邮箱")
+	}
+
+	rawToken, _, err := generateSessionToken()
+	if err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	s.magicLinks[rawToken] = magicLinkEntry{Email: email, ExpiresAt: time.Now().Add(15 * time.Minute)}
+	s.mu.Unlock()
+
+	loginURL := fmt.Sprintf("%s/api/auth/magic-link/verify?token=%s", strings.TrimRight(s.cfg.FrontendURL, "/"), rawToken)
+	if s.cfg.AppEnv == "development" {
+		fmt.Printf("\n[MAGIC LINK DEV] %s\n\n", loginURL)
+	} else if err := s.sendMagicLinkEmail(email, loginURL); err != nil {
+		return nil, err
+	}
+
+	return &MagicLinkRequestResult{
+		Message:     "登录链接已生成。开发环境请查看后端控制台输出。",
+		DevLoginURL: loginURL,
+	}, nil
+}
+
+func (s *Service) VerifyMagicLink(ctx context.Context, rawToken string) (*LoginResult, error) {
+	s.mu.Lock()
+	entry, ok := s.magicLinks[rawToken]
+	if ok {
+		delete(s.magicLinks, rawToken)
+	}
+	s.mu.Unlock()
+
+	if !ok || time.Now().After(entry.ExpiresAt) {
+		return nil, fmt.Errorf("登录链接无效或已过期")
+	}
+
+	user, err := s.repo.GetUserByEmail(ctx, entry.Email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			email := entry.Email
+			username := sanitizeMagicUsername(strings.Split(entry.Email, "@")[0])
+			username = fmt.Sprintf("%s_%d", username, time.Now().Unix()%100000)
+			user, err = s.repo.CreateUser(ctx, &email, username, nil)
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	rawSessionToken, tokenHash, err := generateSessionToken()
+	if err != nil {
+		return nil, err
+	}
+	expiresAt := time.Now().Add(time.Duration(s.cfg.SessionTTLHours) * time.Hour)
+	if _, err := s.repo.CreateSession(ctx, user.ID, tokenHash, nil, nil, expiresAt); err != nil {
+		return nil, err
+	}
+
+	return &LoginResult{
+		User:      user,
+		SetCookie: buildSessionCookie(rawSessionToken, expiresAt),
+	}, nil
+}
+
+func sanitizeMagicUsername(value string) string {
+	var b strings.Builder
+	for _, r := range value {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
+			b.WriteRune(r)
+		}
+	}
+	if b.Len() < 2 {
+		return "user"
+	}
+	return b.String()
+}
+
+func (s *Service) sendMagicLinkEmail(email string, loginURL string) error {
+	if s.cfg.SMTPHost == "" || s.cfg.SMTPUser == "" || s.cfg.SMTPPassword == "" {
+		return fmt.Errorf("SMTP 配置不完整，无法发送登录邮件")
+	}
+
+	from := s.cfg.SMTPFrom
+	if from == "" {
+		from = s.cfg.SMTPUser
+	}
+
+	addr := fmt.Sprintf("%s:%d", s.cfg.SMTPHost, s.cfg.SMTPPort)
+	auth := smtp.PlainAuth("", s.cfg.SMTPUser, s.cfg.SMTPPassword, s.cfg.SMTPHost)
+	message := strings.Join([]string{
+		fmt.Sprintf("From: %s", from),
+		fmt.Sprintf("To: %s", email),
+		"Subject: x·blog 登录链接",
+		"MIME-Version: 1.0",
+		"Content-Type: text/plain; charset=UTF-8",
+		"",
+		"点击下面的链接完成登录，链接 15 分钟内有效：",
+		loginURL,
+	}, "\r\n")
+
+	return smtp.SendMail(addr, auth, from, []string{email}, []byte(message))
+}
+
 func (s *Service) Logout(ctx context.Context, sessionTokenHash string) error {
 	session, err := s.repo.GetSessionByTokenHash(ctx, sessionTokenHash)
 	if err != nil {

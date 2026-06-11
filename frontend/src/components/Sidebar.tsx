@@ -32,10 +32,10 @@ export default function Sidebar({ onNavClick }: SidebarProps) {
     <aside className="flex h-full flex-col rounded-[28px] border border-white/70 bg-[rgba(255,253,248,0.86)] px-4 py-5 shadow-[0_18px_60px_rgba(52,45,32,0.10)] backdrop-blur-xl">
       <Link to="/" className="group block px-3 pb-5 pt-2" onClick={onNavClick}>
         <p className="text-3xl font-black tracking-[-0.04em] text-[var(--text-main)]">
-          一隅
+          x·blog
         </p>
         <p className="mt-1 text-sm font-medium text-[var(--text-soft)]">
-          Sycamore&apos;s blog
+          小地方
         </p>
         <div className="mt-5 h-px bg-gradient-to-r from-transparent via-[var(--border-soft)] to-transparent" />
       </Link>
@@ -98,16 +98,16 @@ export default function Sidebar({ onNavClick }: SidebarProps) {
           </div>
         ) : (
           <div>
-            <p className="text-sm font-bold text-[var(--text-main)]">未登录</p>
+            <p className="text-sm font-bold text-[var(--text-main)]">Welcome！</p>
             <p className="mt-1 text-xs leading-5 text-[var(--text-soft)]">
-              登录后同步阅读记录，后续可留言和创作。
+              来留下点痕迹吧
             </p>
             <Link
               to="/login"
               onClick={onNavClick}
               className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[var(--green-main)] px-4 py-2.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(79,111,82,0.22)] transition-all hover:-translate-y-0.5 hover:bg-[var(--green-deep)]"
             >
-              登录
+              Sign In
             </Link>
           </div>
         )}

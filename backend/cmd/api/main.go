@@ -23,7 +23,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -115,6 +117,9 @@ func main() {
 	r.Route("/api/auth", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)
+		r.Post("/magic-link/request", authHandler.RequestMagicLink)
+		r.Post("/magic-link/verify", authHandler.VerifyMagicLink)
+		r.Get("/magic-link/verify", authHandler.VerifyMagicLink)
 		r.Get("/github/start", authHandler.GitHubStart)
 		r.Get("/github/callback", authHandler.GitHubCallback)
 	})
@@ -128,6 +133,7 @@ func main() {
 
 	// --- User 路由 ---
 	r.Get("/api/users/{username}", userHandler.GetByUsername)
+	r.Get("/api/trending/github", githubTrendingHandler)
 	r.Group(func(r chi.Router) {
 		r.Use(authMiddleware.RequireAuth)
 		r.Patch("/api/users/me", userHandler.UpdateMe)
@@ -166,4 +172,62 @@ func main() {
 		log.Error().Err(err).Msg("HTTP 服务关闭异常")
 	}
 	log.Info().Msg("服务已停止")
+}
+
+func githubTrendingHandler(w http.ResponseWriter, r *http.Request) {
+	type repo struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Language    string `json:"language"`
+		URL         string `json:"url"`
+	}
+
+	items := []repo{}
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, "https://api.github.com/search/repositories?q=stars:%3E50000&sort=stars&order=desc&per_page=10", nil)
+	if err == nil {
+		req.Header.Set("Accept", "application/vnd.github+json")
+		resp, err := http.DefaultClient.Do(req)
+		if err == nil && resp.Body != nil {
+			defer resp.Body.Close()
+			body, _ := io.ReadAll(resp.Body)
+			var payload struct {
+				Items []struct {
+					FullName    string  `json:"full_name"`
+					Description *string `json:"description"`
+					Language    *string `json:"language"`
+					HTMLURL     string  `json:"html_url"`
+				} `json:"items"`
+			}
+			if json.Unmarshal(body, &payload) == nil {
+				for _, item := range payload.Items {
+					description := ""
+					if item.Description != nil {
+						description = *item.Description
+					}
+					language := "Unknown"
+					if item.Language != nil {
+						language = *item.Language
+					}
+					items = append(items, repo{
+						Name:        item.FullName,
+						Description: description,
+						Language:    language,
+						URL:         item.HTMLURL,
+					})
+				}
+			}
+		}
+	}
+
+	if len(items) == 0 {
+		items = []repo{{
+			Name:        "github/trending",
+			Description: "GitHub Trending 数据暂不可用，本地使用占位数据。",
+			Language:    "Go",
+			URL:         "https://github.com",
+		}}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"items": items})
 }

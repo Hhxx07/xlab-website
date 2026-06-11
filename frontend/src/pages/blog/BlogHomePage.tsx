@@ -89,26 +89,26 @@ function HeroSection() {
       <div className="relative z-10 flex h-full items-center px-7 py-10 sm:px-12 lg:px-16">
         <div className="max-w-[560px] text-white">
           <p className="inline-flex rounded-full border border-white/25 bg-white/15 px-4 py-1.5 text-sm font-semibold text-white/90 shadow-sm backdrop-blur">
-            Sycamore&apos;s Corner
+            Huaixi&apos;s Corner
           </p>
           <h1 className="mt-5 text-[clamp(48px,6vw,76px)] font-black leading-none tracking-[-0.04em]">
             一隅
           </h1>
           <p className="mt-6 max-w-[520px] text-lg leading-[1.8] text-white/88">
-            记录学习、工程、阅读和生活里的细碎时刻。这里是我的个人角落，也是通往知识小镇的入口。
+            学习生活里的时刻。
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <a
               href="#latest"
               className="inline-flex items-center justify-center rounded-full bg-[var(--green-main)] px-6 py-3 text-sm font-bold text-white shadow-[0_14px_32px_rgba(32,54,34,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[var(--green-deep)] hover:shadow-[0_18px_40px_rgba(32,54,34,0.34)]"
             >
-              开始阅读
+              阅读
             </a>
             <Link
               to="/world"
               className="inline-flex items-center justify-center rounded-full border border-white/35 bg-white/16 px-6 py-3 text-sm font-bold text-white backdrop-blur transition-all hover:-translate-y-0.5 hover:bg-white/24"
             >
-              进入小镇
+              进入
             </Link>
           </div>
         </div>
@@ -123,17 +123,17 @@ function LatestArticles() {
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-3xl font-black tracking-[-0.03em] text-[var(--text-main)]">
-            最新文章
+            文章
           </h2>
           <p className="mt-2 text-sm font-medium text-[var(--text-muted)]">
-            最近写下的笔记与片段
+            笔记与片段
           </p>
         </div>
         <Link
           to="/hot"
           className="w-fit text-sm font-bold text-[var(--green-main)] transition-colors hover:text-[var(--green-deep)]"
         >
-          查看全部 →
+          Trending →
         </Link>
       </div>
 
@@ -154,7 +154,7 @@ function ExploreSection() {
           探索角落
         </h2>
         <p className="mt-2 text-sm font-medium text-[var(--text-muted)]">
-          从不同方向进入我的记录
+          不同的进入方向
         </p>
       </div>
 
@@ -193,10 +193,10 @@ function TownEntrySection() {
             Tiny Town
           </p>
           <h2 className="mt-3 text-3xl font-black tracking-[-0.03em] text-[var(--text-main)] sm:text-4xl">
-            进入我的知识小镇
+            进入我的小镇
           </h2>
           <p className="mt-4 max-w-2xl text-base leading-8 text-[var(--text-muted)]">
-            六座小房子，分别收藏学习、游戏、生活、电影、小说和体育。它不是唯一入口，但会让内容变得更像一个可以散步的空间。
+            角落中的小镇
           </p>
           <Link
             to="/world"

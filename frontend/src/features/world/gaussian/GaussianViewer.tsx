@@ -1,37 +1,13 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import './GaussianViewer.css'
 
 // ===== i18n =====
-const dict: Record<string, Record<string, string>> = {
-  en: {
-    subtitle: 'HIGH FIDELITY VIEWER .01',
+const t = (key: string) => {
+  const map: Record<string, string> = {
+    subtitle: '时空褶皱',
     stat_points: 'Points',
     stat_fps: 'FPS',
-    ctrl_scale: 'Scale',
-    ctrl_opacity: 'Opacity',
-    ctrl_exposure: 'Exposure',
-    ctrl_speed: 'Speed',
-    flow_amp: 'Amp',
-    flow_freq: 'Freq',
-    flow_speed: 'Flow Spd',
-    nav_move: 'Move',
-    nav_lift: 'Lift',
-    nav_fast: 'Fast',
-    nav_look: 'Look',
-    loading_init: 'INITIALIZING SYSTEM',
-    tutorial_text: '[ WASD ] TO FLY & EXPLORE',
-    loading_downloading: 'You find it.',
-    loading_parsing: 'Wlecome to wonderland.',
-    loading_download_general: 'DOWNLOADING...',
-    btn_flow_tooltip: 'Disperse / Reset Flow',
-    btn_download_tooltip: 'Download Model (.ply)',
-    return_tooltip: 'Esc – Return to Town',
-  },
-  zh: {
-    subtitle: '高保真可视化 .01',
-    stat_points: '点云数',
-    stat_fps: '帧率',
     ctrl_scale: '缩放',
     ctrl_opacity: '透明度',
     ctrl_exposure: '曝光',
@@ -50,8 +26,9 @@ const dict: Record<string, Record<string, string>> = {
     loading_download_general: '你发现了它',
     btn_flow_tooltip: '散开 / 复原 (湍流效果)',
     btn_download_tooltip: '下载模型 (.ply)',
-    return_tooltip: 'Esc – 返回小镇',
-  },
+    return_tooltip: 'Esc Return',
+  }
+  return map[key] ?? key
 }
 
 // ===== Types =====
@@ -93,11 +70,10 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
   // React HUD 状态
   const [loading, setLoading] = useState(true)
   const [progress, setProgress] = useState(0)
-  const [loadingText, setLoadingText] = useState('INITIALIZING SYSTEM')
-  const [tutorialText] = useState('[ WASD ] TO FLY & EXPLORE')
-  const [quote, setQuote] = useState('"Light is the first of painters."')
+  const [loadingText, setLoadingText] = useState('梦境成型...')
+  const [tutorialText] = useState('You are here')
+  const [quote, setQuote] = useState('"梦境属于破碎与纷乱"')
   const [uiHidden, setUiHidden] = useState(false)
-  const [lang, setLang] = useState<'zh' | 'en'>('zh')
   const [stats, setStats] = useState({ points: '--', fps: '--' })
 
   // 滑块状态 (React 管理)
@@ -130,10 +106,6 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
     bridgeRef.current.updateUniforms()
   }, [sliders])
 
-  const t = useCallback(
-    (key: string) => dict[lang]?.[key] ?? key,
-    [lang],
-  )
 
   // ===== 主 Three.js 生命周期 =====
   useEffect(() => {
@@ -191,11 +163,11 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
         this.quoteEl = document.getElementById('gs-loading-quote')
         this.player = { x: window.innerWidth / 2, y: window.innerHeight / 2, vx: 0, vy: 0, size: 8 }
         this.quotes = [
-          'Light is the first of painters. - Emerson',
-          'Simulating photons...',
-          'Art is not what you see, but what you make others see. - Degas',
-          'Constructing Gaussian Splats...',
-          'In order to see, we must forget the name of the thing we are looking at. - Monet',
+          '光是绘画的第一要素。 —— 爱默生',
+          '正在模拟光子...',
+          '艺术不是你所见的，而是你让他人所见的。 —— 德加',
+          '正在构建高斯散点...',
+          '为了看见，我们必须忘记所视之物的名字。 —— 莫奈',
         ]
         this.resize()
         window.addEventListener('resize', this.resizeBound)
@@ -656,9 +628,9 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
         case 'KeyS': k.b = 1; break
         case 'KeyA': k.l = 1; break
         case 'KeyD': k.r = 1; break
-        case 'KeyQ': k.d = 1; break
-        case 'KeyE': k.u = 1; break
-        case 'ShiftLeft': physics.boost = true; break
+        case 'ShiftLeft': k.d = 1; break
+        case 'Space': k.u = 1; break
+        case 'KeyQ': physics.boost = true; break
         case 'KeyH': setUiHidden((h) => !h); break
         case 'Escape': onReturn(); break
       }
@@ -671,9 +643,9 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
         case 'KeyS': k.b = 0; break
         case 'KeyA': k.l = 0; break
         case 'KeyD': k.r = 0; break
-        case 'KeyQ': k.d = 0; break
-        case 'KeyE': k.u = 0; break
-        case 'ShiftLeft': physics.boost = false; break
+        case 'ShiftLeft': k.d = 0; break
+        case 'Space': k.u = 0; break
+        case 'KeyQ': physics.boost = false; break
       }
     }
 
@@ -890,9 +862,9 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
   }, [plyUrl])
 
   // ===== HUD 事件处理 =====
-  const handleSlider = (key: keyof GSState, value: number) => {
-    setSliders((s) => ({ ...s, [key]: value }))
-  }
+  // const handleSlider = (key: keyof GSState, value: number) => {
+  //   setSliders((s) => ({ ...s, [key]: value }))
+  // }
 
   const toggleTurbulence = () => {
     setSliders((s) => ({ ...s, turbulence: s.turbulence > 0.5 ? 0.0 : 1.0 }))
@@ -900,7 +872,7 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
   }
 
   const handleAutoFocus = () => bridgeRef.current.autoFocusCamera()
-  const handleDownload = () => bridgeRef.current.downloadModel()
+  // const handleDownload = () => bridgeRef.current.downloadModel()
 
   // ===== JSX =====
   return (
@@ -910,7 +882,7 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
 
       {/* 返回按钮 */}
       <button className="gs-return-btn" onClick={onReturn} title={t('return_tooltip')}>
-        ← {lang === 'zh' ? '返回小镇' : 'Return to Town'}
+        ← esc
       </button>
 
       {/* 顶部标题 */}
@@ -918,12 +890,6 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
         <h1>{houseName}</h1>
         <div className="gs-header-row">
           <span className="gs-subtitle">{t('subtitle')}</span>
-          <button
-            className="gs-lang-btn"
-            onClick={() => setLang((l) => (l === 'en' ? 'zh' : 'en'))}
-          >
-            中 / EN
-          </button>
         </div>
       </div>
 
@@ -939,7 +905,7 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
         </div>
       </div>
 
-      {/* 流体面板 */}
+      {/* 流体面板
       <div className={`gs-hud-panel gs-flow-panel${flowVisible ? ' visible' : ''}`}>
         <div className="gs-slider-group">
           <label>{t('flow_amp')}</label>
@@ -967,11 +933,11 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
             onChange={(e) => handleSlider('flowSpeed', parseFloat(e.target.value))}
           />
         </div>
-      </div>
+      </div> */}
 
       {/* 底部控制台 */}
       <div className="gs-hud-panel gs-control-deck gs-bottom-panel">
-        <div className="gs-slider-group">
+        {/* <div className="gs-slider-group">
           <label>{t('ctrl_scale')}</label>
           <input
             type="range" min="0.1" max="3.0" step="0.1"
@@ -1006,7 +972,7 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
             onChange={(e) => handleSlider('flySpeed', parseFloat(e.target.value))}
           />
         </div>
-        <div className="gs-deck-divider" />
+        <div className="gs-deck-divider" /> */}
         <button
           className={`gs-icon-btn${sliders.turbulence > 0.5 ? ' active' : ''}`}
           onClick={toggleTurbulence}
@@ -1019,12 +985,12 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
             <path d="M16 12c.5-.5 1.1-.9 1.6-.9.6 0 1.2.4 1.6.9.6.7 1.4 1.1 2.4 1.1.2 0 .4 0 .6-.1" />
           </svg>
         </button>
-        <div className="gs-deck-divider" />
+        {/* <div className="gs-deck-divider" />
         <button className="gs-icon-btn" onClick={handleDownload} title={t('btn_download_tooltip')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
           </svg>
-        </button>
+        </button> */}
         <div className="gs-deck-divider" />
         <button className="gs-icon-btn" onClick={handleAutoFocus} title="Reset View">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1035,14 +1001,14 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
 
       {/* 导航提示 */}
       <div className="gs-hud-panel gs-nav-hint gs-bottom-panel">
-        <div className="gs-key-row"><span className="gs-kbd">WASD</span> {t('nav_move')}</div>
-        <div className="gs-key-row"><span className="gs-kbd">Q / E</span> {t('nav_lift')}</div>
-        <div className="gs-key-row"><span className="gs-kbd">Shift</span> {t('nav_fast')}</div>
+        <div className="gs-key-row"><span className="gs-kbd">FPSD</span> {t('nav_move')}</div>
+        {/* <div className="gs-key-row"><span className="gs-kbd">Q / E</span> {t('nav_lift')}</div>
+        <div className="gs-key-row"><span className="gs-kbd">Shift</span> {t('nav_fast')}</div> */}
         <div className="gs-key-row"><span className="gs-kbd">Mouse</span> {t('nav_look')}</div>
       </div>
 
       {/* 水印 */}
-      <div className="gs-watermark">3DGS Viewer · Powered by Three.js</div>
+      <div className="gs-watermark">梦境</div>
 
       {/* 加载覆盖层 */}
       <div className={`gs-loading-overlay${loading ? ' active' : ''}`}>

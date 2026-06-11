@@ -1,129 +1,85 @@
-// ===========================================================================
-// 登录页面 — src/pages/LoginPage.tsx
-// 
-// 邮箱 + 密码登录表单
-// 登录成功后跳转到首页
-// ===========================================================================
-
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
-import { ApiRequestError } from '../api/client'
+import { Link } from 'react-router-dom'
+import { authApi } from '../api/client'
 
 export default function LoginPage() {
-  const navigate = useNavigate()
-  const { login, isLoading } = useAuthStore()
-
-  // 表单状态
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  /**
-   * 处理表单提交
-   */
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault()
+    setMessage(null)
     setError(null)
 
-    // 基础前端校验
-    if (!email.trim() || !password) {
-      setError('请填写邮箱和密码')
+    if (!email.trim()) {
+      setError('请输入邮箱地址')
       return
     }
 
+    setLoading(true)
     try {
-      await login(email, password)
-      // 登录成功 → 跳转首页
-      navigate('/', { replace: true })
+      const res = await authApi.requestMagicLink({ email })
+      setMessage(res.message)
     } catch (err) {
-      if (err instanceof ApiRequestError) {
-        setError(err.message)
-      } else {
-        setError('登录失败，请稍后重试')
-      }
+      setError(err instanceof Error ? err.message : '发送登录链接失败')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        {/* 标题 */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">登录 XLab</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            欢迎回来，继续探索内容社区
-          </p>
-        </div>
+    <div className="flex min-h-[76vh] items-center justify-center px-5 py-12" style={{ background: 'var(--bg-page)' }}>
+      <div className="warm-card w-full max-w-md p-7 sm:p-8">
+        <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--brown-main)]">
+          Magic Link
+        </p>
+        <h1 className="mt-2 text-3xl font-black tracking-[-0.03em] text-[var(--text-main)]">
+          登录一隅
+        </h1>
+        <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">
+          输入邮箱后，系统会发送一个临时登录链接。本地开发环境会直接在后端控制台输出链接。
+        </p>
 
-        {/* 表单卡片 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* 错误提示 */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
-                {error}
-              </div>
-            )}
-
-            {/* 邮箱输入 */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
-                邮箱地址
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                autoComplete="email"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
-              />
+        <form onSubmit={handleSubmit} className="mt-7 space-y-4">
+          {error && (
+            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
             </div>
-
-            {/* 密码输入 */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-                密码
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="请输入密码"
-                autoComplete="current-password"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
-              />
+          )}
+          {message && (
+            <div className="rounded-2xl border border-[var(--border-soft)] bg-[var(--green-soft)] px-4 py-3 text-sm text-[var(--green-deep)]">
+              {message}
             </div>
+          )}
 
-            {/* 提交按钮 */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors font-medium text-sm disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {isLoading ? '登录中...' : '登录'}
-            </button>
-          </form>
+          <label className="block">
+            <span className="text-sm font-bold text-[var(--text-main)]">邮箱地址</span>
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+              className="mt-2 w-full rounded-2xl border border-[var(--border-soft)] bg-white px-4 py-3 text-sm outline-none transition-shadow focus:ring-4 focus:ring-[var(--green-soft)]"
+            />
+          </label>
 
-          {/* 底部链接 */}
-          <div className="mt-5 text-center text-sm">
-            <span className="text-gray-500">还没有账号？</span>{' '}
-            <Link to="/register" className="text-brand-600 hover:text-brand-700 font-medium">
-              立即注册
-            </Link>
-          </div>
-        </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-full bg-[var(--green-main)] px-5 py-3 text-sm font-bold text-white shadow-[0_10px_24px_rgba(79,111,82,0.22)] transition-all hover:-translate-y-0.5 hover:bg-[var(--green-deep)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? '发送中...' : '发送登录链接'}
+          </button>
+        </form>
 
-        {/* GitHub OAuth 占位 */}
-        <div className="mt-4 text-center">
-          <p className="text-xs text-gray-400">
-            GitHub 登录将在后续版本中实现
-          </p>
+        <div className="mt-5 text-center text-sm text-[var(--text-soft)]">
+          仍需要密码注册？{' '}
+          <Link to="/register" className="font-bold text-[var(--green-main)]">
+            前往注册
+          </Link>
         </div>
       </div>
     </div>
