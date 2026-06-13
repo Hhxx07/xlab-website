@@ -87,7 +87,7 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
     flowFreq: 0.3,
     flowSpeed: 0.6,
   })
-  const [flowVisible, setFlowVisible] = useState(false)
+  const [, setFlowVisible] = useState(false)
 
   // Three.js 桥接 ref
   const bridgeRef = useRef<ThreeBridge>({

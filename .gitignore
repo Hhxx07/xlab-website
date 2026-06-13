@@ -15,7 +15,6 @@ tmp/
 *.exe
 *.test
 *.out
-go.sum
 .gocache
 .gocache/
 *.go.*
