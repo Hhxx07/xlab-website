@@ -75,6 +75,32 @@ export default function Sidebar({ onNavClick }: SidebarProps) {
             </Link>
           )
         })}
+        {isAuthenticated && user?.role === 'admin' && (
+          <Link
+            to="/admin"
+            onClick={onNavClick}
+            className={`group relative flex items-center gap-3 rounded-[14px] px-4 py-3 text-sm transition-all ${
+              isActive('/admin')
+                ? 'bg-[var(--green-soft)] text-[var(--green-deep)] shadow-sm'
+                : 'text-slate-500 hover:bg-white/80 hover:text-[var(--text-main)]'
+            }`}
+          >
+            {isActive('/admin') && (
+              <span className="absolute left-2 top-1/2 h-6 w-1 -translate-y-1/2 rounded-full bg-[var(--green-main)]" />
+            )}
+            <span className={`ml-1 flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
+              isActive('/admin') ? 'bg-white/80 text-[var(--green-main)]' : 'bg-white/50 text-slate-400'
+            }`}>
+              <AdminIcon />
+            </span>
+            <span className="min-w-0">
+              <span className={`block ${isActive('/admin') ? 'font-bold' : 'font-semibold'}`}>
+                管理
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-400">Admin</span>
+            </span>
+          </Link>
+        )}
       </nav>
 
       <div className="mt-5 rounded-[20px] border border-[var(--border-soft)] bg-white/70 p-4">
@@ -156,6 +182,15 @@ function LifeIcon() {
   return (
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 21s7-4.5 7-11a4 4 0 0 0-7-2.65A4 4 0 0 0 5 10c0 6.5 7 11 7 11Z" />
+    </svg>
+  )
+}
+
+function AdminIcon() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
     </svg>
   )
 }

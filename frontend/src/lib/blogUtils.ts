@@ -57,3 +57,43 @@ export const MODULE_ACCENT_COLORS: Record<string, string> = {
   life: '#92b88b',
   sport: '#8dbd72',
 }
+
+// ===========================================================================
+// Tag name → color mapping（DB tag 系统兼容层）
+// 将 tag name 映射回 module key 的颜色，BlogCard 无需改动
+// ===========================================================================
+
+const TAG_TO_MODULE: Record<string, string> = {
+  '知识': 'knowledge',
+  '游戏': 'game',
+  '小说': 'novel',
+  '电影': 'movie',
+  '生活': 'life',
+  '运动': 'sport',
+}
+
+/** 将 DB Article 转为 BlogCard 兼容的 NoteDocument 形状 */
+export function articleToNoteDoc(a: {
+  slug: string; title: string; summary: string; cover?: string
+  tags?: { name: string }[]
+}): NoteDocument {
+  const tagName = a.tags?.[0]?.name ?? ''
+  const module = TAG_TO_MODULE[tagName] || 'knowledge'
+  return {
+    slug: a.slug,
+    title: a.title,
+    module,
+    summary: a.summary || '',
+    body: '',
+    raw: '',
+    cover: a.cover,
+    hot: false,
+  }
+}
+
+// section→tag 映射（用于 API 查询参数）
+export const SECTION_TAGS: Record<string, string[]> = {
+  study: ['知识'],
+  fun: ['游戏', '小说', '电影'],
+  life: ['生活', '运动'],
+}

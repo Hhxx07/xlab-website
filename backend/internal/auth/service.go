@@ -139,7 +139,81 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterR
 		return nil, fmt.Errorf("创建用户失败: %w", err)
 	}
 
+	// 5. 生成邮箱验证令牌
+	_ = s.sendVerificationEmail(ctx, user.ID, input.Email)
+
 	return &RegisterResult{User: user}, nil
+}
+
+// sendVerificationEmail 生成验证令牌并发送邮件（dev 模式打印链接）
+func (s *Service) sendVerificationEmail(ctx context.Context, userID, email string) error {
+	rawToken, tokenHash, err := generateSessionToken()
+	if err != nil {
+		return err
+	}
+
+	expiresAt := time.Now().Add(24 * time.Hour) // 24小时有效
+	if err := s.repo.CreateEmailVerificationToken(ctx, userID, tokenHash, expiresAt); err != nil {
+		return err
+	}
+
+	verifyURL := fmt.Sprintf("%s/api/auth/verify-email?token=%s", s.cfg.FrontendURL, rawToken)
+
+	if s.cfg.SMTPHost != "" && s.cfg.SMTPUser != "" {
+		// 生产环境发送邮件
+		from := s.cfg.SMTPFrom
+		if from == "" {
+			from = s.cfg.SMTPUser
+		}
+		addr := fmt.Sprintf("%s:%d", s.cfg.SMTPHost, s.cfg.SMTPPort)
+		auth := smtp.PlainAuth("", s.cfg.SMTPUser, s.cfg.SMTPPassword, s.cfg.SMTPHost)
+		message := strings.Join([]string{
+			fmt.Sprintf("From: %s", from),
+			fmt.Sprintf("To: %s", email),
+			"Subject: 验证你的 XLab 邮箱",
+			"MIME-Version: 1.0",
+			"Content-Type: text/plain; charset=UTF-8",
+			"",
+			fmt.Sprintf("点击链接验证邮箱：%s", verifyURL),
+			"链接 24 小时内有效。",
+		}, "\r\n")
+		_ = smtp.SendMail(addr, auth, from, []string{email}, []byte(message))
+	} else {
+		// 开发环境打印到控制台
+		fmt.Printf("\n========================================\n")
+		fmt.Printf("📧 邮箱验证链接（dev）:\n%s\n", verifyURL)
+		fmt.Printf("========================================\n\n")
+	}
+
+	return nil
+}
+
+// VerifyEmail 验证邮箱
+func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
+	tokenHash := HashToken(rawToken)
+
+	t, err := s.repo.GetEmailVerificationToken(ctx, tokenHash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New("验证链接无效或已过期")
+		}
+		return err
+	}
+
+	// 标记邮箱已验证
+	if err := s.repo.UpdateUserEmailVerified(ctx, t.UserID); err != nil {
+		return err
+	}
+
+	// 删除已使用的令牌
+	_ = s.repo.DeleteEmailVerificationToken(ctx, t.ID)
+
+	return nil
+}
+
+// ResendVerification 重新发送验证邮件
+func (s *Service) ResendVerification(ctx context.Context, userID, email string) error {
+	return s.sendVerificationEmail(ctx, userID, email)
 }
 
 // ---------------------------------------------------------------------------

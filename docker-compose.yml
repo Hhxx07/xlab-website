@@ -3,7 +3,7 @@ services:
     image: postgres:18
     container_name: xlab-postgres
     environment:
-      POSTGRES_USER: app
+      POSTGRES_USER: app # 管理员账号密码
       POSTGRES_PASSWORD: app
       POSTGRES_DB: app
     ports:
@@ -86,7 +86,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      VITE_API_BASE_URL: http://api:8080
+      VITE_API_BASE_URL: http://localhost:8080
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     depends_on:

@@ -1,12 +1,33 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import BlogCard from '../../components/BlogCard'
-import { FUN_TABS, getNotesByModules, type FunTabKey } from '../../lib/blogUtils'
+import { articlesApi } from '../../api/articles'
+import { articleToNoteDoc } from '../../lib/blogUtils'
+import type { Article } from '../../types'
 
-const TAB_KEYS = Object.keys(FUN_TABS) as FunTabKey[]
+const FUN_TABS_DB = {
+  games: { label: '游戏', tag: '游戏' },
+  novels: { label: '小说', tag: '小说' },
+  movies: { label: '电影', tag: '电影' },
+} as const
+
+type FunTabKey = keyof typeof FUN_TABS_DB
+const TAB_KEYS = Object.keys(FUN_TABS_DB) as FunTabKey[]
 
 export default function FunPage() {
   const [activeTab, setActiveTab] = useState<FunTabKey>('games')
-  const notes = getNotesByModules([...FUN_TABS[activeTab].modules])
+  const [articles, setArticles] = useState<Article[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+    const tag = FUN_TABS_DB[activeTab].tag
+    articlesApi.list({ tag, limit: '20' })
+      .then((data) => { if (alive) setArticles(data.articles ?? []) })
+      .catch(() => { if (alive) setArticles([]) })
+      .finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [activeTab])
 
   return (
     <div className="px-5 py-12 sm:px-8 lg:px-10">
@@ -34,15 +55,21 @@ export default function FunPage() {
                   : 'text-[var(--text-muted)] hover:bg-white hover:text-[var(--text-main)]'
               }`}
             >
-              {FUN_TABS[key].label}
+              {FUN_TABS_DB[key].label}
             </button>
           ))}
         </div>
 
-        {notes.length > 0 ? (
+        {loading ? (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {notes.map((note) => (
-              <BlogCard key={note.slug} note={note} />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="warm-card h-[248px] animate-pulse bg-white/70" />
+            ))}
+          </div>
+        ) : articles.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {articles.map((a) => (
+              <BlogCard key={a.slug} note={articleToNoteDoc(a)} />
             ))}
           </div>
         ) : (

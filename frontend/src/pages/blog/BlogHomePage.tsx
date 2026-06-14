@@ -1,36 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import BlogCard from '../../components/BlogCard'
-import type { NoteDocument } from '../../content/notes/noteRegistry'
-
-const latestArticles: Array<NoteDocument & { meta: string }> = [
-  {
-    slug: 'knowledge/math',
-    title: '曲线积分到底在积什么？',
-    module: 'knowledge',
-    summary: '从“沿着曲线累加”理解第一类曲线积分，把公式和几何直觉连接起来。',
-    body: '',
-    raw: '',
-    meta: '2026.06.09 · 8 min read',
-  },
-  {
-    slug: 'knowledge/programming',
-    title: '3D 打印桌面传感器支架设计',
-    module: 'project',
-    summary: '为坐姿检测系统设计一个稳定、省料、方便走线的桌面支架。',
-    body: '',
-    raw: '',
-    meta: '2026.06.10 · 6 min read',
-  },
-  {
-    slug: 'life/fitness',
-    title: '如何让生活重新变得有秩序',
-    module: 'life',
-    summary: '从训练、学习和记录开始，慢慢恢复对一天的掌控感。',
-    body: '',
-    raw: '',
-    meta: '2026.06.08 · 5 min read',
-  },
-]
+import { articlesApi } from '../../api/articles'
+import { articleToNoteDoc } from '../../lib/blogUtils'
+import type { Article } from '../../types'
 
 const exploreCards = [
   {
@@ -118,6 +91,18 @@ function HeroSection() {
 }
 
 function LatestArticles() {
+  const [articles, setArticles] = useState<Article[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let alive = true
+    articlesApi.list({ limit: '6' })
+      .then((data) => { if (alive) setArticles(data.articles ?? []) })
+      .catch(() => { if (alive) setArticles([]) })
+      .finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [])
+
   return (
     <section id="latest">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -137,11 +122,19 @@ function LatestArticles() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {latestArticles.map((note) => (
-          <BlogCard key={note.slug} note={note} meta={note.meta} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="warm-card h-[248px] animate-pulse bg-white/70" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {articles.map((a) => (
+            <BlogCard key={a.slug} note={articleToNoteDoc(a)} />
+          ))}
+        </div>
+      )}
     </section>
   )
 }

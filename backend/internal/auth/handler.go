@@ -146,6 +146,51 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 // GET /api/auth/github/start  （Phase 1 骨架）
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// GET /api/auth/verify-email?token=xxx
+// ---------------------------------------------------------------------------
+func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	token := strings.TrimSpace(r.URL.Query().Get("token"))
+	if token == "" {
+		writeError(w, http.StatusBadRequest, "缺少验证令牌")
+		return
+	}
+
+	if err := h.svc.VerifyEmail(r.Context(), token); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// 验证成功后重定向到前端 profile 页面
+	http.Redirect(w, r, h.cfg.FrontendURL+"/profile?verified=1", http.StatusFound)
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/resend-verification
+// ---------------------------------------------------------------------------
+func (h *Handler) ResendVerification(w http.ResponseWriter, r *http.Request) {
+	user := GetUserFromContext(r.Context())
+	if user == nil {
+		writeError(w, http.StatusUnauthorized, "请先登录")
+		return
+	}
+	if user.Email == nil {
+		writeError(w, http.StatusBadRequest, "该账户没有绑定邮箱")
+		return
+	}
+
+	if err := h.svc.ResendVerification(r.Context(), user.ID, *user.Email); err != nil {
+		writeError(w, http.StatusInternalServerError, "发送验证邮件失败")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "验证邮件已发送"})
+}
+
+// ---------------------------------------------------------------------------
+// GitHub OAuth 入口（骨架）
+// ---------------------------------------------------------------------------
+
 // GitHubStart GitHub OAuth 入口
 // Phase 1：返回提示信息，完整流程后续实现
 func (h *Handler) GitHubStart(w http.ResponseWriter, r *http.Request) {

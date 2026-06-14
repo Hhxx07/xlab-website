@@ -1,8 +1,21 @@
+import { useEffect, useState } from 'react'
 import BlogCard from '../../components/BlogCard'
-import { getNotesBySection } from '../../lib/blogUtils'
+import { articlesApi } from '../../api/articles'
+import { articleToNoteDoc } from '../../lib/blogUtils'
+import type { Article } from '../../types'
 
 export default function StudyPage() {
-  const notes = getNotesBySection('study')
+  const [articles, setArticles] = useState<Article[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let alive = true
+    articlesApi.list({ section: 'study', limit: '20' })
+      .then((data) => { if (alive) setArticles(data.articles ?? []) })
+      .catch(() => { if (alive) setArticles([]) })
+      .finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [])
 
   return (
     <ArticleGridPage
@@ -10,7 +23,8 @@ export default function StudyPage() {
       title="学习"
       description="课程笔记、数学、物理、计算机与工程实践。"
       emptyText="暂无学习笔记"
-      notes={notes}
+      articles={articles}
+      loading={loading}
     />
   )
 }
@@ -20,13 +34,15 @@ export function ArticleGridPage({
   title,
   description,
   emptyText,
-  notes,
+  articles,
+  loading,
 }: {
   eyebrow: string
   title: string
   description: string
   emptyText: string
-  notes: Parameters<typeof BlogCard>[0]['note'][]
+  articles: Article[]
+  loading: boolean
 }) {
   return (
     <div className="px-5 py-12 sm:px-8 lg:px-10">
@@ -43,10 +59,16 @@ export function ArticleGridPage({
           </p>
         </div>
 
-        {notes.length > 0 ? (
+        {loading ? (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {notes.map((note) => (
-              <BlogCard key={note.slug} note={note} />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="warm-card h-[248px] animate-pulse bg-white/70" />
+            ))}
+          </div>
+        ) : articles.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {articles.map((a) => (
+              <BlogCard key={a.slug} note={articleToNoteDoc(a)} />
             ))}
           </div>
         ) : (

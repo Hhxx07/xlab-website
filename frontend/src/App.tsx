@@ -9,6 +9,7 @@ import FunPage from './pages/blog/FunPage'
 import LifePage from './pages/blog/LifePage'
 import ArticleDetailPage from './pages/blog/ArticleDetailPage'
 import EditorPage from './pages/blog/EditorPage'
+import AdminPage from './pages/AdminPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="fun" element={<FunPage />} />
         <Route path="life" element={<LifePage />} />
         <Route path="editor" element={<EditorPage />} />
+        <Route path="admin" element={<AdminPage />} />
         <Route path="post/*" element={<ArticleDetailPage />} />
       </Route>
 

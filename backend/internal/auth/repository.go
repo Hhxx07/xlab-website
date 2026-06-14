@@ -209,3 +209,56 @@ func (r *Repository) DeleteExpiredSessions(ctx context.Context) (int64, error) {
 	}
 	return tag.RowsAffected(), nil
 }
+
+// ---------------------------------------------------------------------------
+// 邮箱验证令牌操作
+// ---------------------------------------------------------------------------
+
+// EmailVerificationToken 邮箱验证令牌模型
+type EmailVerificationToken struct {
+	ID        string
+	UserID    string
+	TokenHash string
+	ExpiresAt time.Time
+	CreatedAt time.Time
+}
+
+// CreateEmailVerificationToken 创建邮箱验证令牌
+func (r *Repository) CreateEmailVerificationToken(ctx context.Context, userID, tokenHash string, expiresAt time.Time) error {
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO email_verification_tokens (id, user_id, token_hash, expires_at)
+		 VALUES (gen_random_uuid(), $1, $2, $3)`,
+		userID, tokenHash, expiresAt,
+	)
+	return err
+}
+
+// GetEmailVerificationToken 通过 token hash 查找有效验证令牌
+func (r *Repository) GetEmailVerificationToken(ctx context.Context, tokenHash string) (*EmailVerificationToken, error) {
+	t := &EmailVerificationToken{}
+	err := r.pool.QueryRow(ctx,
+		`SELECT id, user_id, token_hash, expires_at, created_at
+		 FROM email_verification_tokens
+		 WHERE token_hash = $1 AND expires_at > NOW()`,
+		tokenHash,
+	).Scan(&t.ID, &t.UserID, &t.TokenHash, &t.ExpiresAt, &t.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+// DeleteEmailVerificationToken 删除已使用的验证令牌
+func (r *Repository) DeleteEmailVerificationToken(ctx context.Context, id string) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM email_verification_tokens WHERE id = $1`, id)
+	return err
+}
+
+// DeleteExpiredEmailVerificationTokens 清理过期验证令牌
+func (r *Repository) DeleteExpiredEmailVerificationTokens(ctx context.Context) (int64, error) {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM email_verification_tokens WHERE expires_at < NOW()`)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}

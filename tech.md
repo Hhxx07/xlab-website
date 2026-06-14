@@ -251,3 +251,72 @@ XLab 是一个前后端分离的网页应用，前端使用 React + Vite 构建 
 | 内容存储 | Markdown 文件 + Vite raw import | 内容即代码，版本管理，无需数据库 |
 | 容器化 | Docker Compose | 统一开发环境，一次配置处处运行 |
 | 热重载 | Air (Go) + Vite HMR (前端) | 改代码立刻看到效果 |
+
+---
+
+## 六、数据库迁移文件的 up / down 设计
+
+`backend/migrations/` 下面目前有 4 个文件，按“版本号 + up/down”成对维护：
+
+- `000001_init_users.up.sql`：创建用户相关基础表
+- `000001_init_users.down.sql`：回滚第 1 版迁移，删除第 1 版创建的表
+- `000002_add_sessions.up.sql`：在用户表基础上创建会话表
+- `000002_add_sessions.down.sql`：回滚第 2 版迁移，删除会话表
+
+### 命名规则
+
+- `000001`、`000002` 这种前缀表示迁移版本号，迁移器会按数字顺序执行
+- `.up.sql` 表示“升级迁移”，也就是把数据库结构推进到新版本
+- `.down.sql` 表示“降级迁移”，也就是把这个版本新增的结构撤销掉
+
+### 这 4 个文件分别做了什么
+
+#### `000001_init_users.up.sql`
+
+这个文件负责初始化最基础的用户数据结构，主要创建 3 张表：
+
+- `users`：用户主表，保存邮箱、用户名、头像、角色、密码哈希等信息
+- `user_identities`：第三方登录身份关联表，预留 GitHub / Google 等 OAuth 登录
+- `email_verification_tokens`：邮箱验证令牌表，预留后续邮件验证流程
+
+同时还会创建一些常用索引，方便按用户名、邮箱、用户 ID 查询。
+
+#### `000001_init_users.down.sql`
+
+这个文件是第 1 版迁移的回滚脚本，作用是把第 1 步建出来的表删掉：
+
+- 先删 `email_verification_tokens`
+- 再删 `user_identities`
+- 最后删 `users`
+
+这里按这个顺序删除，是因为后面的表依赖前面的表，必须先删依赖表，再删被依赖表。
+
+#### `000002_add_sessions.up.sql`
+
+这个文件在 `users` 表已经存在的前提下，再创建 `sessions` 表，用来保存登录会话：
+
+- `user_id` 外键指向 `users.id`
+- `token_hash` 保存 token 的 SHA-256 哈希，不直接存原始 token
+- `user_agent`、`ip_hash` 用于审计和风控
+- `expires_at` 控制会话过期时间
+
+因为它依赖 `users`，所以必须排在 `000001` 之后执行。
+
+#### `000002_add_sessions.down.sql`
+
+这个文件是第 2 版迁移的回滚脚本，直接删除 `sessions` 表即可：
+
+- `DROP TABLE IF EXISTS sessions;`
+
+由于 `sessions` 依赖 `users`，所以回滚时也要先删 `sessions`，不能反过来。
+
+### 实际执行顺序
+
+迁移器通常会按下面的顺序工作：
+
+1. 执行 `000001_init_users.up.sql`
+2. 再执行 `000002_add_sessions.up.sql`
+3. 如果需要回滚，先执行 `000002_add_sessions.down.sql`
+4. 再执行 `000001_init_users.down.sql`
+
+这样可以保证数据库结构始终满足外键依赖关系，也能安全地撤销最近一次迁移。
