@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import type { Comment } from '../types'
 
 export default function CommentSection({ articleSlug }: { articleSlug: string }) {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)

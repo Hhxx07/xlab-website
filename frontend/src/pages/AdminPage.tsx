@@ -55,7 +55,7 @@ export default function AdminPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
           <h1 className="text-3xl font-black tracking-[-0.03em] text-[var(--text-main)]">
-            🛡 管理后台
+            🛡 后台
           </h1>
         </div>
 
@@ -76,8 +76,8 @@ export default function AdminPage() {
         {/* Tab 切换 */}
         <div className="mb-6 flex gap-2">
           {([
-            ['articles', '📋 文章管理'],
-            ['users', '👥 用户管理'],
+            ['articles', '📋 文章'],
+            ['users', '👥 用户'],
           ] as const).map(([key, label]) => (
             <button
               key={key}

@@ -3,7 +3,7 @@
 // ===========================================================================
 
 import { ApiRequestError } from './client'
-import type { Article, Tag, Section } from '../types'
+import type { Article, AdminUser, Tag, Section } from '../types'
 
 const API_BASE = '/api'
 
@@ -71,7 +71,7 @@ export const adminApi = {
   },
   users: (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : ''
-    return request<{ users: { id: string; email: string; username: string; display_name?: string; role: string; article_count: number; created_at: string }[]; total: number }>(`/admin/users${qs}`)
+    return request<{ users: AdminUser[]; total: number }>(`/admin/users${qs}`)
   },
   updateUserRole: (userId: string, role: string) =>
     request<{ message: string }>(`/admin/users/${userId}/role`, {
