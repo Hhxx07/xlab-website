@@ -47,7 +47,7 @@ export default function Decorations() {
         <meshStandardMaterial color="#7a4a28" />
       </mesh>
 
-      <group position={[-1.45, 0, 6.72]}>
+      <group position={[-1.45, 0, 4.92]}>
         <mesh position={[0, 0.42, 0]} castShadow>
           <boxGeometry args={[0.14, 0.84, 0.14]} />
           <meshStandardMaterial color="#4b5563" />

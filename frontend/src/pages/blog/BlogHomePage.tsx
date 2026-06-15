@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import BlogCard from '../../components/BlogCard'
 import MilkdownMarkdown from '../../components/MilkdownMarkdown'
@@ -38,7 +39,49 @@ const exploreCards = [
   },
 ]
 
+const NOSE_FIREWORK_DEBUG = {
+  particleCount: 36,
+  baseDistance: 66,
+  distanceStep: 13,
+  particleSize: 11,
+  baseScale: 1.45,
+  holdScale: 1.25,
+  comboScale: 0.28,
+  maxCombo: 6,
+  comboWindowMs: 900,
+  longPressMs: 3000,
+}
+
 export default function BlogHomePage() {
+  const [showXlabBanner, setShowXlabBanner] = useState(false)
+
+  useEffect(() => {
+    let buffer = ''
+    let hideTimer: number | null = null
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+
+      const key = event.key.toLowerCase()
+      if (!/^[a-z]$/.test(key)) return
+
+      buffer = (buffer + key).slice(-4)
+      if (buffer === 'xlab') {
+        setShowXlabBanner(true)
+        if (hideTimer !== null) window.clearTimeout(hideTimer)
+        hideTimer = window.setTimeout(() => setShowXlabBanner(false), 3600)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      if (hideTimer !== null) window.clearTimeout(hideTimer)
+    }
+  }, [])
+
   return (
     <div className="px-5 py-6 sm:px-8 lg:px-10 lg:py-8">
       <div className="mx-auto max-w-7xl space-y-14 pb-16">
@@ -47,6 +90,33 @@ export default function BlogHomePage() {
         <LatestArticles />
         <ExploreSection />
       </div>
+      {showXlabBanner && <XlabEasterEggBanner onClose={() => setShowXlabBanner(false)} />}
+    </div>
+  )
+}
+
+function XlabEasterEggBanner({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="xlab-easter-banner fixed left-1/2 top-7 z-[90] w-[min(92vw,720px)] -translate-x-1/2">
+      <div className="flex items-center gap-4 rounded-[28px] border border-white/70 bg-[rgba(255,253,248,0.92)] px-5 py-4 shadow-[0_24px_70px_rgba(52,45,32,0.18)] backdrop-blur-xl sm:px-6">
+        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[var(--green-soft)] text-sm font-black text-[var(--green-main)] shadow-sm">
+          XL
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brown-main)]">Easter Egg</p>
+          <p className="mt-1 text-xl font-black tracking-[-0.03em] text-[var(--text-main)] sm:text-2xl">
+            xlab -- 创造会创造的人
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/78 text-lg font-black text-[var(--text-soft)] transition hover:bg-[var(--brown-soft)] hover:text-[var(--brown-main)]"
+          aria-label="关闭彩蛋横幅"
+        >
+          ×
+        </button>
+      </div>
     </div>
   )
 }
@@ -54,10 +124,56 @@ export default function BlogHomePage() {
 function HeroSection() {
   const navigate = useNavigate()
   const [enteringTown, setEnteringTown] = useState(false)
+  const [fireworkKey, setFireworkKey] = useState(0)
+  const [fireworkScale, setFireworkScale] = useState(NOSE_FIREWORK_DEBUG.baseScale)
+  const noseTimer = useRef<number | null>(null)
+  const noseStartedAt = useRef<number | null>(null)
+  const noseLongPressed = useRef(false)
+  const noseCombo = useRef(0)
+  const lastNoseFireworkAt = useRef(0)
 
   const enterTown = () => {
     setEnteringTown(true)
     window.setTimeout(() => navigate('/world'), 760)
+  }
+
+  const clearNoseTimer = () => {
+    if (noseTimer.current !== null) {
+      window.clearTimeout(noseTimer.current)
+      noseTimer.current = null
+    }
+    noseStartedAt.current = null
+  }
+
+  const startNosePress = () => {
+    clearNoseTimer()
+    noseLongPressed.current = false
+    noseStartedAt.current = performance.now()
+    noseTimer.current = window.setTimeout(() => {
+      noseLongPressed.current = true
+      enterTown()
+    }, NOSE_FIREWORK_DEBUG.longPressMs)
+  }
+
+  const finishNosePress = () => {
+    const pressedMs = noseStartedAt.current === null ? 0 : performance.now() - noseStartedAt.current
+    clearNoseTimer()
+    if (noseLongPressed.current) {
+      noseLongPressed.current = false
+      return
+    }
+    const now = performance.now()
+    noseCombo.current = now - lastNoseFireworkAt.current < NOSE_FIREWORK_DEBUG.comboWindowMs
+      ? Math.min(noseCombo.current + 1, NOSE_FIREWORK_DEBUG.maxCombo)
+      : 1
+    lastNoseFireworkAt.current = now
+    const holdRatio = Math.min(pressedMs / NOSE_FIREWORK_DEBUG.longPressMs, 1)
+    setFireworkScale(
+      NOSE_FIREWORK_DEBUG.baseScale
+      + holdRatio * NOSE_FIREWORK_DEBUG.holdScale
+      + (noseCombo.current - 1) * NOSE_FIREWORK_DEBUG.comboScale,
+    )
+    setFireworkKey(Date.now())
   }
 
   return (
@@ -68,6 +184,35 @@ function HeroSection() {
         className="absolute inset-0 h-full w-full object-cover"
       />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(30,38,30,0.58)_0%,rgba(30,38,30,0.34)_42%,rgba(30,38,30,0.08)_100%)]" />
+
+      <button
+        type="button"
+        className="home-dog-nose"
+        aria-label="小狗鼻子"
+        onPointerDown={startNosePress}
+        onPointerUp={finishNosePress}
+        onPointerCancel={clearNoseTimer}
+        onPointerLeave={clearNoseTimer}
+      >
+        <span
+          key={fireworkKey}
+          className="home-nose-firework"
+          style={{ '--firework-scale': fireworkScale } as CSSProperties}
+          aria-hidden="true"
+        >
+          {Array.from({ length: NOSE_FIREWORK_DEBUG.particleCount }).map((_, index) => (
+            <i
+              key={index}
+              style={{
+                '--angle': `${index * (360 / NOSE_FIREWORK_DEBUG.particleCount)}deg`,
+                '--distance': `${NOSE_FIREWORK_DEBUG.baseDistance + (index % 5) * NOSE_FIREWORK_DEBUG.distanceStep}px`,
+                '--delay': `${(index % 6) * 18}ms`,
+                '--particle-size': `${NOSE_FIREWORK_DEBUG.particleSize}px`,
+              } as CSSProperties}
+            />
+          ))}
+        </span>
+      </button>
 
       <div className="relative z-10 flex h-full items-center px-7 py-10 sm:px-12 lg:px-16">
         <div className="max-w-[560px] text-white">
@@ -87,13 +232,12 @@ function HeroSection() {
             >
               阅读文章
             </a>
-            <button
-              type="button"
-              onClick={enterTown}
+            <Link
+              to="/hot"
               className="inline-flex items-center justify-center rounded-full border border-white/35 bg-white/16 px-6 py-3 text-sm font-bold text-white backdrop-blur transition-all hover:-translate-y-0.5 hover:bg-white/24"
             >
-              进入小镇
-            </button>
+              看看热点
+            </Link>
           </div>
         </div>
       </div>
@@ -110,7 +254,7 @@ function HeroSection() {
 
 function IntroNoteSection() {
   return (
-    <section className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)] lg:items-stretch">
+    <section>
       <div className="warm-card overflow-hidden p-7 sm:p-9">
         <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--brown-main)]">
           Intro Note
@@ -120,18 +264,6 @@ function IntroNoteSection() {
         </h2>
         <div className="milkdown-render mt-6">
           <MilkdownMarkdown markdown={siteIntro} />
-        </div>
-      </div>
-
-      <div className="relative min-h-[320px] overflow-hidden rounded-[28px] border border-[var(--border-soft)] bg-[radial-gradient(circle_at_20%_20%,#fff8dc_0%,transparent_32%),linear-gradient(135deg,#eef6ea_0%,#fffdf8_50%,#ead8be_100%)] shadow-[var(--shadow-card)]">
-        <div className="absolute left-8 top-8 rounded-full bg-white/70 px-4 py-2 text-sm font-bold text-[var(--green-deep)] shadow-sm">
-          Notes stay local first
-        </div>
-        <div className="absolute bottom-8 left-8 right-8 rounded-[22px] border border-white/70 bg-white/72 p-5 backdrop-blur">
-          <p className="text-sm font-bold text-[var(--text-main)]">Local Markdown</p>
-          <p className="mt-2 text-sm leading-7 text-[var(--text-muted)]">
-            这段介绍来自本地 Markdown 文件，可以直接在仓库里维护，也能用同一套 Markdown 渲染样式展示。
-          </p>
         </div>
       </div>
     </section>

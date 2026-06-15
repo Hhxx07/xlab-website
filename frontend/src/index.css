@@ -148,6 +148,79 @@ body {
     animation: townGlowText 780ms ease both;
   }
 
+  .home-dog-nose {
+    position: absolute;
+    left: 52%;
+    top: 42.5%;
+    z-index: 20;
+    width: clamp(42px, 4.5vw, 72px);
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  .home-dog-nose::before {
+    content: "";
+    position: absolute;
+    inset: 16%;
+    border-radius: inherit;
+    background: rgba(255, 241, 202, 0);
+    box-shadow: 0 0 0 rgba(255, 241, 202, 0);
+    transition:
+      background-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+
+  .home-dog-nose:hover::before,
+  .home-dog-nose:focus-visible::before {
+    background: rgba(255, 241, 202, 0.16);
+    box-shadow: 0 0 24px rgba(255, 231, 150, 0.55);
+    transform: scale(1.18);
+  }
+
+  .home-nose-firework {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+    transform: scale(var(--firework-scale, 1));
+    transform-origin: center;
+  }
+
+  .home-nose-firework i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--particle-size, 10px);
+    height: var(--particle-size, 10px);
+    border-radius: 999px;
+    color: #fde68a;
+    background: currentColor;
+    box-shadow: 0 0 calc(var(--particle-size, 10px) * 2.4) currentColor;
+    animation: homeNoseFirework 860ms cubic-bezier(0.12, 0.82, 0.18, 1) both;
+    animation-delay: var(--delay);
+    transform: translate(-50%, -50%);
+  }
+
+  .home-nose-firework i:nth-child(3n + 1) {
+    color: #fbbf24;
+  }
+
+  .home-nose-firework i:nth-child(3n + 2) {
+    color: #93c5fd;
+  }
+
+  .home-nose-firework i:nth-child(3n + 3) {
+    color: #f9a8d4;
+  }
+
   .milkdown-shell .milkdown {
     min-height: 560px;
     background: var(--bg-card);
@@ -311,5 +384,23 @@ body {
   100% {
     transform: translateY(-8px);
     opacity: 0;
+  }
+}
+
+@keyframes homeNoseFirework {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+  16% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--angle))
+      translateX(var(--distance))
+      scale(0.18);
   }
 }

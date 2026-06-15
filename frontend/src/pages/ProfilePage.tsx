@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { articlesApi } from '../api/articles'
+import { userApi } from '../api/client'
 import BlogCard from '../components/BlogCard'
 import { articleToNoteDoc } from '../lib/blogUtils'
 import type { Article } from '../types'
@@ -11,6 +12,10 @@ export default function ProfilePage() {
   const [myArticles, setMyArticles] = useState<Article[]>([])
   const [articlesLoading, setArticlesLoading] = useState(false)
   const [searchParams] = useState(() => new URLSearchParams(window.location.search))
+  const [isEditingBio, setIsEditingBio] = useState(false)
+  const [bioDraft, setBioDraft] = useState('')
+  const [bioSaving, setBioSaving] = useState(false)
+  const [bioError, setBioError] = useState('')
 
   useEffect(() => {
     if (!isAuthenticated && !isLoading) fetchMe()
@@ -18,6 +23,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!isAuthenticated || !user) return
+    setBioDraft(user.bio ?? '')
     setArticlesLoading(true)
     articlesApi.myArticles()
       .then((data) => setMyArticles(data.articles ?? []))
@@ -69,6 +75,20 @@ export default function ProfilePage() {
     }
   }
 
+  const handleSaveBio = async () => {
+    setBioSaving(true)
+    setBioError('')
+    try {
+      const res = await userApi.updateMe({ bio: bioDraft.trim() })
+      useAuthStore.setState({ user: res.user })
+      setIsEditingBio(false)
+    } catch {
+      setBioError('保存失败，请稍后再试。')
+    } finally {
+      setBioSaving(false)
+    }
+  }
+
   return (
     <div className="bg-[var(--bg-page)] px-5 py-10 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-6xl">
@@ -79,9 +99,17 @@ export default function ProfilePage() {
         )}
 
         <section className="relative overflow-hidden rounded-[28px] border border-[var(--border-soft)] bg-[linear-gradient(135deg,#fffdf8_0%,#eef6ea_48%,#f4e2c8_100%)] p-6 shadow-[var(--shadow-card)] sm:p-8">
-          <div className="absolute right-8 top-8 hidden rounded-full bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--brown-main)] shadow-sm sm:block">
+          <button
+            type="button"
+            onClick={() => {
+              setBioDraft(user.bio ?? '')
+              setBioError('')
+              setIsEditingBio((value) => !value)
+            }}
+            className="absolute right-5 top-5 rounded-full bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--brown-main)] shadow-sm transition hover:-translate-y-0.5 hover:bg-white sm:right-8 sm:top-8"
+          >
             Profile
-          </div>
+          </button>
 
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -93,9 +121,45 @@ export default function ProfilePage() {
                 <h1 className="mt-1 text-4xl font-black tracking-[-0.04em] text-[var(--text-main)]">
                   {displayName}
                 </h1>
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-muted)]">
-                  {user.bio || '这里会展示你的个人简介。'}
-                </p>
+                {isEditingBio ? (
+                  <div className="mt-4 max-w-2xl">
+                    <textarea
+                      value={bioDraft}
+                      onChange={(e) => setBioDraft(e.target.value)}
+                      maxLength={500}
+                      rows={4}
+                      className="w-full rounded-2xl border border-[var(--border-soft)] bg-white/82 px-4 py-3 text-sm leading-7 text-[var(--text-main)] outline-none transition focus:border-[var(--green-main)] focus:shadow-[0_0_0_4px_rgba(79,111,82,0.12)]"
+                      placeholder="写一句个性签名，介绍此刻的你。"
+                    />
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleSaveBio}
+                        disabled={bioSaving}
+                        className="rounded-full bg-[var(--green-main)] px-5 py-2 text-sm font-bold text-white shadow-[0_10px_24px_rgba(79,111,82,0.20)] transition hover:bg-[var(--green-deep)] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {bioSaving ? '保存中...' : '保存签名'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBioDraft(user.bio ?? '')
+                          setBioError('')
+                          setIsEditingBio(false)
+                        }}
+                        className="rounded-full bg-white/78 px-5 py-2 text-sm font-bold text-[var(--text-muted)] transition hover:bg-white hover:text-[var(--text-main)]"
+                      >
+                        取消
+                      </button>
+                      <span className="text-xs font-medium text-[var(--text-soft)]">{bioDraft.length}/500</span>
+                    </div>
+                    {bioError && <p className="mt-2 text-sm font-semibold text-red-500">{bioError}</p>}
+                  </div>
+                ) : (
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-muted)]">
+                    {user.bio || '这里会展示你的个人简介。'}
+                  </p>
+                )}
               </div>
             </div>
 
