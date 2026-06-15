@@ -329,7 +329,7 @@ func (s *Service) sendMagicLinkEmail(email string, loginURL string) error {
 	message := strings.Join([]string{
 		fmt.Sprintf("From: %s", from),
 		fmt.Sprintf("To: %s", email),
-		"Subject: x路blog 登录链接",
+		"Subject: x-blog 登录链接",
 		"MIME-Version: 1.0",
 		"Content-Type: text/plain; charset=UTF-8",
 		"",

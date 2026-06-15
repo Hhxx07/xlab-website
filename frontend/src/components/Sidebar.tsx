@@ -42,7 +42,7 @@ export default function Sidebar({ onNavClick }: SidebarProps) {
     <aside className="flex h-full flex-col rounded-[28px] border border-white/70 bg-[rgba(255,253,248,0.86)] px-4 py-5 shadow-[0_18px_60px_rgba(52,45,32,0.10)] backdrop-blur-xl">
       <Link to="/" className="group block px-3 pb-5 pt-2" onClick={onNavClick}>
         <p className="text-3xl font-black tracking-[-0.04em] text-[var(--text-main)]">
-          x路blog
+          x-blog
         </p>
         <p className="mt-1 text-sm font-medium text-[var(--text-soft)]">
           小地方，也舒服

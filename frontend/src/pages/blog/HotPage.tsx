@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 type TrendingRepo = {
   name: string
@@ -41,6 +41,7 @@ export default function HotPage() {
   const [trendingRepos, setTrendingRepos] = useState<TrendingRepo[]>([])
   const [hottestRepos, setHottestRepos] = useState<TrendingRepo[]>([])
   const [historyRepos, setHistoryRepos] = useState<TrendingRepo[]>([])
+  const [activeReadme, setActiveReadme] = useState<TrendingRepo | null>(null)
   const [trendingLoading, setTrendingLoading] = useState(true)
   const [hottestLoading, setHottestLoading] = useState(true)
   const [historyLoading, setHistoryLoading] = useState(true)
@@ -97,7 +98,7 @@ export default function HotPage() {
             热门资讯
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-muted)]">
-            今日 GitHub Trending 会被保存到本地数据库，仓库链接和 README 快照可以在历史区回看。
+            今日 GitHub Trending 会被保存到本地数据库；同一天同一个仓库不会重复归档。
           </p>
         </div>
 
@@ -108,16 +109,16 @@ export default function HotPage() {
               title="Trending Now"
               description="GitHub 今日正在升温的开源项目。"
             />
-            <RepoList repos={trendingRepos} loading={trendingLoading} showStars />
+            <RepoList repos={trendingRepos} loading={trendingLoading} showStars onReadme={setActiveReadme} />
           </section>
 
           <section>
             <SectionHeader
               marker="Archive"
               title="Trending Archive"
-              description="已经入库的 Trending 记录，包含 README 本地快照。"
+              description="按照归档日期分栏显示，README 为当时抓取到的本地快照。"
             />
-            <RepoList repos={historyRepos} loading={historyLoading} showStars showReadme emptyText="还没有历史记录，刷新今日 Trending 后会自动入库。" />
+            <ArchiveGroups repos={historyRepos} loading={historyLoading} onReadme={setActiveReadme} />
           </section>
 
           <section>
@@ -126,10 +127,14 @@ export default function HotPage() {
               title="The Hottest"
               description="历史累计 star 最高的一组标志性项目。"
             />
-            <RepoList repos={hottestRepos} loading={hottestLoading} />
+            <RepoList repos={hottestRepos} loading={hottestLoading} onReadme={setActiveReadme} />
           </section>
         </div>
       </div>
+
+      {activeReadme && (
+        <ReadmeModal repo={activeReadme} onClose={() => setActiveReadme(null)} />
+      )}
     </div>
   )
 }
@@ -160,18 +165,71 @@ function SectionHeader({
   )
 }
 
+function ArchiveGroups({
+  repos,
+  loading,
+  onReadme,
+}: {
+  repos: TrendingRepo[]
+  loading: boolean
+  onReadme: (repo: TrendingRepo) => void
+}) {
+  const groups = useMemo(() => {
+    const map = new Map<string, TrendingRepo[]>()
+    for (const repo of repos) {
+      const key = repo.captured_at ? new Date(repo.captured_at).toLocaleDateString('zh-CN') : '未记录日期'
+      map.set(key, [...(map.get(key) ?? []), repo])
+    }
+    return Array.from(map.entries())
+  }, [repos])
+
+  if (loading) {
+    return (
+      <div className="grid gap-4 lg:grid-cols-2">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="warm-card h-36 animate-pulse bg-white/70" />
+        ))}
+      </div>
+    )
+  }
+
+  if (!groups.length) {
+    return (
+      <div className="warm-card p-6 text-sm font-semibold text-[var(--text-muted)]">
+        还没有历史记录，刷新今日 Trending 后会自动入库。
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid gap-5 xl:grid-cols-2">
+      {groups.map(([date, items]) => (
+        <div key={date} className="warm-card p-5">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h3 className="text-lg font-black text-[var(--text-main)]">{date}</h3>
+            <span className="rounded-full bg-[var(--green-soft)] px-3 py-1 text-xs font-bold text-[var(--green-main)]">
+              {items.length} repos
+            </span>
+          </div>
+          <RepoList repos={items} loading={false} showStars compact onReadme={onReadme} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function RepoList({
   repos,
   loading,
   showStars = false,
-  showReadme = false,
-  emptyText = '暂无数据。',
+  compact = false,
+  onReadme,
 }: {
   repos: TrendingRepo[]
   loading: boolean
   showStars?: boolean
-  showReadme?: boolean
-  emptyText?: string
+  compact?: boolean
+  onReadme: (repo: TrendingRepo) => void
 }) {
   if (loading) {
     return (
@@ -183,60 +241,83 @@ function RepoList({
     )
   }
 
-  if (!repos.length) {
-    return (
-      <div className="warm-card p-6 text-sm font-semibold text-[var(--text-muted)]">
-        {emptyText}
-      </div>
-    )
-  }
-
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className={compact ? 'space-y-3' : 'grid gap-4 lg:grid-cols-2'}>
       {repos.map((item) => (
-        <a
+        <article
           key={`${item.name}-${item.url}-${item.captured_at ?? ''}`}
-          href={item.url}
-          target="_blank"
-          rel="noreferrer"
-          className="warm-card warm-card-hover block p-6"
+          className={`warm-card warm-card-hover flex flex-col justify-between p-5 ${compact ? 'min-h-0' : 'min-h-52'}`}
         >
-          <div className="flex min-h-32 flex-col justify-between gap-5">
-            <div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <h3 className="text-xl font-black tracking-[-0.02em] text-[var(--text-main)]">
-                  {item.name}
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {showStars && item.stars && (
-                    <span className="w-fit rounded-full bg-[var(--orange-soft)] px-3 py-1.5 text-xs font-bold text-[var(--brown-main)]">
-                      {item.stars}
-                    </span>
-                  )}
-                  <span className="w-fit rounded-full bg-[var(--green-soft)] px-3 py-1.5 text-xs font-bold text-[var(--green-main)]">
-                    {item.language || 'Unknown'}
+          <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <h3 className="text-lg font-black tracking-[-0.02em] text-[var(--text-main)]">
+                {item.name}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {showStars && item.stars && (
+                  <span className="w-fit rounded-full bg-[var(--orange-soft)] px-3 py-1.5 text-xs font-bold text-[var(--brown-main)]">
+                    {item.stars}
                   </span>
-                </div>
+                )}
+                <span className="w-fit rounded-full bg-[var(--green-soft)] px-3 py-1.5 text-xs font-bold text-[var(--green-main)]">
+                  {item.language || 'Unknown'}
+                </span>
               </div>
-              {item.captured_at && (
-                <p className="mt-2 text-xs font-semibold text-[var(--text-soft)]">
-                  Saved at {new Date(item.captured_at).toLocaleString()}
-                </p>
-              )}
-              <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">
-                {item.description || 'No description provided.'}
-              </p>
-              {showReadme && item.readme && (
-                <pre className="mt-4 max-h-36 overflow-hidden rounded-2xl bg-[var(--bg-page)] p-4 text-xs leading-6 text-[var(--text-muted)]">
-                  {item.readme.slice(0, 900)}
-                </pre>
-              )}
             </div>
-
-            <span className="text-sm font-bold text-[var(--green-main)]">打开仓库 →</span>
+            {item.captured_at && !compact && (
+              <p className="mt-2 text-xs font-semibold text-[var(--text-soft)]">
+                Saved at {new Date(item.captured_at).toLocaleString()}
+              </p>
+            )}
+            <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">
+              {item.description || 'No description provided.'}
+            </p>
           </div>
-        </a>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex rounded-full bg-[var(--green-main)] px-4 py-2 text-xs font-bold text-white transition hover:bg-[var(--green-deep)]"
+            >
+              GitHub
+            </a>
+            <button
+              type="button"
+              onClick={() => onReadme(item)}
+              className="inline-flex rounded-full border border-[var(--border-soft)] bg-white px-4 py-2 text-xs font-bold text-[var(--text-main)] transition hover:border-[var(--green-main)] hover:text-[var(--green-main)]"
+            >
+              README
+            </button>
+          </div>
+        </article>
       ))}
+    </div>
+  )
+}
+
+function ReadmeModal({ repo, onClose }: { repo: TrendingRepo; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/42 px-4 py-8 backdrop-blur-sm" onClick={onClose}>
+      <div className="warm-card max-h-[82vh] w-full max-w-4xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--border-soft)] p-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brown-main)]">README Snapshot</p>
+            <h3 className="mt-1 text-xl font-black text-[var(--text-main)]">{repo.name}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-[var(--bg-page)] px-4 py-2 text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)]"
+          >
+            关闭
+          </button>
+        </div>
+        <pre className="max-h-[62vh] overflow-auto whitespace-pre-wrap bg-[var(--bg-page)] p-5 text-xs leading-6 text-[var(--text-muted)]">
+          {repo.readme || '这条记录没有抓取到 README。'}
+        </pre>
+      </div>
     </div>
   )
 }

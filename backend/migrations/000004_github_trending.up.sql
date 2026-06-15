@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS github_trending_repos (
   stars TEXT NOT NULL DEFAULT '',
   stars_today INTEGER,
   readme TEXT NOT NULL DEFAULT '',
+  archive_date DATE NOT NULL DEFAULT CURRENT_DATE,
   captured_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -22,3 +23,6 @@ CREATE INDEX IF NOT EXISTS idx_github_trending_repos_captured_at
 
 CREATE INDEX IF NOT EXISTS idx_github_trending_repos_full_name
   ON github_trending_repos (full_name);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_github_trending_repos_unique_day
+  ON github_trending_repos (full_name, archive_date);

@@ -256,7 +256,7 @@ func githubTrendingHistoryHandler(db *pgxpool.Pool) http.HandlerFunc {
 		rows, err := db.Query(ctx,
 			`SELECT full_name, description, language, url, stars, stars_today, readme, captured_at
 			 FROM github_trending_repos
-			 ORDER BY captured_at DESC
+			 ORDER BY archive_date DESC, captured_at DESC
 			 LIMIT 50`,
 		)
 		if err != nil {
@@ -350,6 +350,27 @@ func saveTrendingRun(ctx context.Context, db *pgxpool.Pool, items []persistedTre
 	}
 	defer tx.Rollback(ctx)
 
+	newItems := make([]persistedTrendingRepo, 0, len(items))
+	for _, item := range items {
+		var exists bool
+		archiveDate := capturedAt.Format("2006-01-02")
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS(
+				SELECT 1 FROM github_trending_repos
+				WHERE full_name = $1 AND archive_date = $2::date
+			)`,
+			item.Name, archiveDate,
+		).Scan(&exists); err != nil {
+			return err
+		}
+		if !exists {
+			newItems = append(newItems, item)
+		}
+	}
+	if len(newItems) == 0 {
+		return tx.Commit(ctx)
+	}
+
 	var runID string
 	if err := tx.QueryRow(ctx,
 		`INSERT INTO github_trending_runs (source, captured_at)
@@ -360,16 +381,16 @@ func saveTrendingRun(ctx context.Context, db *pgxpool.Pool, items []persistedTre
 		return err
 	}
 
-	for _, item := range items {
+	for _, item := range newItems {
 		readme := fetchGitHubReadme(ctx, item.Name)
 		if len(readme) > 30000 {
 			readme = readme[:30000]
 		}
 		_, err := tx.Exec(ctx,
 			`INSERT INTO github_trending_repos
-			 (run_id, full_name, description, language, url, stars, stars_today, readme, captured_at)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			runID, item.Name, item.Description, item.Language, item.URL, item.Stars, item.StarsToday, readme, capturedAt,
+			 (run_id, full_name, description, language, url, stars, stars_today, readme, archive_date, captured_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::date, $10)`,
+			runID, item.Name, item.Description, item.Language, item.URL, item.Stars, item.StarsToday, readme, capturedAt.Format("2006-01-02"), capturedAt,
 		)
 		if err != nil {
 			return err

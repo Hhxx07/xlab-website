@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import BlogCard from '../../components/BlogCard'
 import MilkdownMarkdown from '../../components/MilkdownMarkdown'
 import { articlesApi } from '../../api/articles'
@@ -52,10 +52,18 @@ export default function BlogHomePage() {
 }
 
 function HeroSection() {
+  const navigate = useNavigate()
+  const [enteringTown, setEnteringTown] = useState(false)
+
+  const enterTown = () => {
+    setEnteringTown(true)
+    window.setTimeout(() => navigate('/world'), 760)
+  }
+
   return (
     <section className="relative h-[clamp(420px,56vh,620px)] overflow-hidden rounded-[28px] shadow-[0_24px_70px_rgba(45,57,44,0.18)]">
       <img
-        src="/鍏荤灏忕嫍.png"
+        src="/养神小狗.png"
         alt="草地、阳光和躺在椅子上休息的小狗"
         className="absolute inset-0 h-full w-full object-cover"
       />
@@ -79,15 +87,23 @@ function HeroSection() {
             >
               阅读文章
             </a>
-            <Link
-              to="/world"
+            <button
+              type="button"
+              onClick={enterTown}
               className="inline-flex items-center justify-center rounded-full border border-white/35 bg-white/16 px-6 py-3 text-sm font-bold text-white backdrop-blur transition-all hover:-translate-y-0.5 hover:bg-white/24"
             >
               进入小镇
-            </Link>
+            </button>
           </div>
         </div>
       </div>
+
+      {enteringTown && (
+        <div className="town-glow-transition fixed inset-0 z-[80] pointer-events-none">
+          <div className="town-glow-core" />
+          <div className="town-glow-text">进入小镇</div>
+        </div>
+      )}
     </section>
   )
 }

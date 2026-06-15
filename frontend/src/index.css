@@ -117,6 +117,37 @@ body {
     box-shadow: 0 0 0 4px rgba(79, 111, 82, 0.12);
   }
 
+  .town-glow-transition {
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(circle at 50% 52%, rgba(255, 248, 220, 0.95) 0%, rgba(244, 226, 200, 0.72) 28%, rgba(79, 111, 82, 0.34) 64%, rgba(31, 42, 55, 0.24) 100%);
+    animation: townGlowFade 780ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .town-glow-core {
+    position: absolute;
+    width: min(68vw, 560px);
+    aspect-ratio: 1;
+    border-radius: 999px;
+    background:
+      radial-gradient(circle, rgba(255, 255, 255, 0.96) 0%, rgba(255, 241, 202, 0.82) 34%, rgba(154, 106, 58, 0.1) 62%, transparent 72%);
+    box-shadow:
+      0 0 90px rgba(255, 237, 170, 0.82),
+      0 0 180px rgba(79, 111, 82, 0.32);
+    animation: townGlowPulse 780ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .town-glow-text {
+    position: relative;
+    color: var(--green-deep);
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    animation: townGlowText 780ms ease both;
+  }
+
   .milkdown-shell .milkdown {
     min-height: 560px;
     background: var(--bg-card);
@@ -235,5 +266,50 @@ body {
     opacity: 1;
     transform: translateY(0) scale(1);
     filter: blur(0);
+  }
+}
+
+@keyframes townGlowFade {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+  22% {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+  }
+}
+
+@keyframes townGlowPulse {
+  0% {
+    transform: scale(0.18);
+    opacity: 0;
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0.86;
+  }
+}
+
+@keyframes townGlowText {
+  0% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  30%,
+  72% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-8px);
+    opacity: 0;
   }
 }
