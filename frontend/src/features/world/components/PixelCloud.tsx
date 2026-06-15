@@ -6,9 +6,9 @@ export default function PixelCloud({ position }: { position: [number, number, nu
         [0, 0.12, 0],
         [0.45, 0, 0],
       ].map((part, index) => (
-        <mesh key={index} position={part as [number, number, number]}>
+        <mesh key={index} position={part as [number, number, number]} castShadow receiveShadow>
           <boxGeometry args={[0.8, 0.35, 0.45]} />
-          <meshStandardMaterial color="#ffffff" />
+          <meshStandardMaterial color="#ffffff" roughness={0.72} />
         </mesh>
       ))}
     </group>

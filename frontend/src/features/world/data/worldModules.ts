@@ -8,6 +8,7 @@ export type WorldModule = {
   color: string
   route: string
   type: 'house'
+  modelUrl?: string
 }
 
 export const worldModules: WorldModule[] = [
@@ -19,6 +20,7 @@ export const worldModules: WorldModule[] = [
     color: '#f7e8a4',
     route: '/notes/knowledge/math',
     type: 'house',
+    modelUrl: '/world/models/knowledge.glb',
   },
   {
     id: 'game',
@@ -28,6 +30,7 @@ export const worldModules: WorldModule[] = [
     color: '#b8dcff',
     route: '/notes/game/black-myth-inspired',
     type: 'house',
+    modelUrl: '/world/models/game.glb',
   },
   {
     id: 'life',
@@ -37,6 +40,7 @@ export const worldModules: WorldModule[] = [
     color: '#ffc9a7',
     route: '/notes/life/dorm',
     type: 'house',
+    modelUrl: '/world/models/life.glb',
   },
   {
     id: 'movie',
@@ -46,6 +50,7 @@ export const worldModules: WorldModule[] = [
     color: '#d5d8ff',
     route: '/notes/movie/movie-list',
     type: 'house',
+    modelUrl: '/world/models/movie.glb',
   },
   {
     id: 'novel',
@@ -55,6 +60,7 @@ export const worldModules: WorldModule[] = [
     color: '#d7c6ad',
     route: '/notes/novel/1984',
     type: 'house',
+    modelUrl: '/world/models/novel.glb',
   },
   {
     id: 'sport',
@@ -64,5 +70,6 @@ export const worldModules: WorldModule[] = [
     color: '#bdecc8',
     route: '/notes/sport/frisbee',
     type: 'house',
+    modelUrl: '/world/models/sport.glb',
   },
 ]

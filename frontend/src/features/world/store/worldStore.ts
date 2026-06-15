@@ -6,6 +6,7 @@ type SceneId = 'town' | WorldModuleId
 
 type WorldState = {
   playerPosition: [number, number, number]
+  playerDirection: [number, number, number]
   currentScene: SceneId
   activeHotspot: WorldHotspot | null
   activeNoteSlug: string | null
@@ -14,6 +15,7 @@ type WorldState = {
   movementEnabled: boolean
   visitedModules: WorldModuleId[]
   setPlayerPosition: (position: [number, number, number]) => void
+  setPlayerDirection: (direction: [number, number, number]) => void
   setActiveHotspot: (hotspot: WorldHotspot | null) => void
   openNote: (slug: string) => void
   openNews: () => void
@@ -24,6 +26,7 @@ type WorldState = {
 
 export const useWorldStore = create<WorldState>((set) => ({
   playerPosition: [0, 0, 0],
+  playerDirection: [0, 0, 1],
   currentScene: 'town',
   activeHotspot: null,
   activeNoteSlug: null,
@@ -43,6 +46,8 @@ export const useWorldStore = create<WorldState>((set) => ({
       }
       return { playerPosition: position }
     }),
+  setPlayerDirection: (direction) =>
+    set({ playerDirection: direction }),
   setActiveHotspot: (hotspot) =>
     set((state) => {
       if (state.activeHotspot?.id === hotspot?.id) {

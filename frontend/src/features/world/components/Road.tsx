@@ -20,6 +20,8 @@ export default function Road() {
             key={index}
             position={vertical ? [0.34, 0.08, offset] : [offset, 0.08, -0.34]}
             rotation={[0, vertical ? 0.2 : -0.2, 0]}
+            castShadow
+            receiveShadow
           >
             <boxGeometry args={[0.28, 0.05, 0.22]} />
             <meshStandardMaterial color="#e6dfd0" />

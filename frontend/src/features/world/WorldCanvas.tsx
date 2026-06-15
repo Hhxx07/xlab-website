@@ -3,8 +3,7 @@ import { OrthographicCamera, OrbitControls, PerspectiveCamera } from '@react-thr
 import type { MutableRefObject } from 'react'
 import type { MovementInput } from './utils/isoDirection'
 import WorldScene from './WorldScene'
-
-import { FREE_CAMERA } from '../../config/debug';
+import type { WorldCameraMode } from './CameraRig'
 
 // 调试模式改成自由相机
 
@@ -20,13 +19,19 @@ const emptyControls: MutableRefObject<MovementInput> = {
 export default function WorldCanvas({
   controls = emptyControls,
   preview = false,
+  cameraMode = 'third',
 }: {
   controls?: MutableRefObject<MovementInput>
   preview?: boolean
+  cameraMode?: WorldCameraMode
 }) {
+  const useFreeCamera = cameraMode === 'free'
+  const usePerspective = cameraMode === 'free' || cameraMode === 'third'
+
   return (
     <Canvas
       dpr={1}
+      shadows
       gl={{
         antialias: true,
         alpha: false,
@@ -36,25 +41,27 @@ export default function WorldCanvas({
     >
       <color attach="background" args={['#bae6fd']} />
 
-      {FREE_CAMERA ? ( 
+      {usePerspective ? (
         <>
           <PerspectiveCamera
             makeDefault
-            position={[6, 6, 8]}
-            fov={50}
+            position={cameraMode === 'third' ? [0, 2.8, -5] : [6, 6, 8]}
+            fov={cameraMode === 'third' ? 58 : 50}
             near={0.1}
             far={1000}
           />
 
-          <OrbitControls
-            makeDefault
-            target={[0, 0, 0]}
-            enableDamping
-            dampingFactor={0.08}
-            enablePan
-            enableZoom
-            enableRotate
-          />
+          {useFreeCamera && (
+            <OrbitControls
+              makeDefault
+              target={[0, 0, 0]}
+              enableDamping
+              dampingFactor={0.08}
+              enablePan
+              enableZoom
+              enableRotate
+            />
+          )}
         </>
       ) : (
         <OrthographicCamera
@@ -67,7 +74,7 @@ export default function WorldCanvas({
         />
       )}
 
-      <WorldScene controls={controls} preview={preview} />
+      <WorldScene controls={controls} preview={preview} cameraMode={cameraMode} />
     </Canvas>
   )
 }

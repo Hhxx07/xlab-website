@@ -21,7 +21,7 @@ export const hotspots: WorldHotspot[] = [
     position: [0, 0, 2.1],
     radius: 1.45,
     type: 'open_news',
-    interactionText: '按 E 查看新闻板',
+    interactionText: '短按 E 查看新闻板',
   },
   {
     id: 'knowledge-door',
@@ -31,7 +31,7 @@ export const hotspots: WorldHotspot[] = [
     radius: 1.35,
     type: 'enter_house',
     noteSlug: 'knowledge/math',
-    interactionText: '按 E 进入知识小屋',
+    interactionText: '短按 E 打开知识笔记',
   },
   {
     id: 'knowledge-blackboard',
@@ -41,7 +41,7 @@ export const hotspots: WorldHotspot[] = [
     radius: 1.0,
     type: 'open_note',
     noteSlug: 'knowledge/math',
-    interactionText: '按 E 打开数学知识 Markdown',
+    interactionText: '短按 E 打开数学知识 Markdown',
   },
   {
     id: 'game-door',
@@ -51,7 +51,7 @@ export const hotspots: WorldHotspot[] = [
     radius: 1.35,
     type: 'enter_house',
     noteSlug: 'game/black-myth-inspired',
-    interactionText: '按 E 进入游戏小屋',
+    interactionText: '短按 E 打开游戏笔记',
   },
   {
     id: 'game-button',
@@ -61,7 +61,7 @@ export const hotspots: WorldHotspot[] = [
     radius: 1.0,
     type: 'open_note',
     noteSlug: 'game/game-mechanics',
-    interactionText: '按 E 查看游戏机制分析',
+    interactionText: '短按 E 查看游戏机制分析',
   },
   {
     id: 'life-door',
@@ -71,7 +71,7 @@ export const hotspots: WorldHotspot[] = [
     radius: 1.35,
     type: 'enter_house',
     noteSlug: 'life/dorm',
-    interactionText: '按 E 进入生活小屋',
+    interactionText: '短按 E 打开生活笔记',
   },
   {
     id: 'life-shoes',
@@ -81,7 +81,7 @@ export const hotspots: WorldHotspot[] = [
     radius: 1.0,
     type: 'open_note',
     noteSlug: 'life/fitness',
-    interactionText: '按 E 打开健身训练记录',
+    interactionText: '短按 E 打开健身训练记录',
   },
   {
     id: 'movie-door',
@@ -91,7 +91,7 @@ export const hotspots: WorldHotspot[] = [
     radius: 1.35,
     type: 'enter_house',
     noteSlug: 'movie/movie-list',
-    interactionText: '按 E 进入电影小屋',
+    interactionText: '短按 E 打开电影笔记',
   },
   {
     id: 'novel-door',
@@ -101,7 +101,7 @@ export const hotspots: WorldHotspot[] = [
     radius: 1.35,
     type: 'enter_house',
     noteSlug: 'novel/1984',
-    interactionText: '按 E 进入小说小屋',
+    interactionText: '短按 E 打开小说笔记',
   },
   {
     id: 'sport-door',
@@ -111,7 +111,7 @@ export const hotspots: WorldHotspot[] = [
     radius: 1.35,
     type: 'enter_house',
     noteSlug: 'sport/frisbee',
-    interactionText: '按 E 进入体育小屋',
+    interactionText: '短按 E 打开体育笔记',
   },
   {
     id: 'sport-track',
@@ -121,6 +121,6 @@ export const hotspots: WorldHotspot[] = [
     radius: 1.0,
     type: 'open_note',
     noteSlug: 'sport/running',
-    interactionText: '按 E 打开跑步训练记录',
+    interactionText: '短按 E 打开跑步训练记录',
   },
 ]

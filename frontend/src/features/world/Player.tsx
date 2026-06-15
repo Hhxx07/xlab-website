@@ -23,6 +23,7 @@ export default function Player({
     ),
   )
   const setPlayerPosition = useWorldStore((state) => state.setPlayerPosition)
+  const setPlayerDirection = useWorldStore((state) => state.setPlayerDirection)
   const movementEnabled = useWorldStore((state) => state.movementEnabled)
 
   useFrame((_, delta) => {
@@ -40,6 +41,7 @@ export default function Player({
     if (direction.x !== 0 || direction.z !== 0) {
       positionRef.current = clamped
       setPlayerPosition(clamped)
+      setPlayerDirection([direction.x, 0, direction.z])
     }
 
     targetPosition.current.set(clamped[0], 0, clamped[2])

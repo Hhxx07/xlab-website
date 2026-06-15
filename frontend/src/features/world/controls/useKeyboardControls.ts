@@ -13,15 +13,34 @@ const keyMap = {
 
 type ControlKey = (typeof keyMap)[keyof typeof keyMap]
 
-export function useKeyboardControls(onAction?: () => void, onEscape?: () => void) {
+export function useKeyboardControls(
+  onAction?: () => void,
+  onEscape?: () => void,
+  onLongAction?: () => void,
+  onActionProgress?: (progress: number) => void,
+) {
   const keys = useRef<Record<ControlKey, boolean>>({
     up: false,
     down: false,
     left: false,
     right: false,
   })
+  const actionStartedAt = useRef<number | null>(null)
+  const longActionFired = useRef(false)
+  const progressTimer = useRef<number | null>(null)
 
   useEffect(() => {
+    const stopActionTimer = (fireShort: boolean) => {
+      if (progressTimer.current !== null) {
+        window.clearInterval(progressTimer.current)
+        progressTimer.current = null
+      }
+      onActionProgress?.(0)
+      actionStartedAt.current = null
+      if (fireShort && !longActionFired.current) onAction?.()
+      longActionFired.current = false
+    }
+
     const setKey = (event: KeyboardEvent, pressed: boolean) => {
       const mapped = keyMap[event.code as keyof typeof keyMap]
       if (mapped) {
@@ -29,13 +48,27 @@ export function useKeyboardControls(onAction?: () => void, onEscape?: () => void
         event.preventDefault()
       }
 
-      if (pressed && event.code === 'KeyE') {
-        onAction?.()
+      if (event.code === 'KeyE') {
+        event.preventDefault()
+        if (pressed && actionStartedAt.current === null) {
+          actionStartedAt.current = performance.now()
+          longActionFired.current = false
+          progressTimer.current = window.setInterval(() => {
+            if (actionStartedAt.current === null) return
+            const progress = Math.min((performance.now() - actionStartedAt.current) / 3000, 1)
+            onActionProgress?.(progress)
+            if (progress >= 1 && !longActionFired.current) {
+              longActionFired.current = true
+              onLongAction?.()
+            }
+          }, 50)
+        }
+        if (!pressed && actionStartedAt.current !== null) {
+          stopActionTimer(true)
+        }
       }
 
-      if (pressed && event.code === 'Escape') {
-        onEscape?.()
-      }
+      if (pressed && event.code === 'Escape') onEscape?.()
     }
 
     const handleKeyDown = (event: KeyboardEvent) => setKey(event, true)
@@ -47,8 +80,9 @@ export function useKeyboardControls(onAction?: () => void, onEscape?: () => void
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
+      stopActionTimer(false)
     }
-  }, [onAction, onEscape])
+  }, [onAction, onActionProgress, onEscape, onLongAction])
 
   return keys
 }

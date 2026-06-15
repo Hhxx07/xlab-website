@@ -162,6 +162,7 @@ func main() {
 	r.Get("/api/trending/github", githubTrendingHandler)
 	r.Get("/api/trending/github/scrape", githubTrendingScrapeHandler(dbPool))
 	r.Get("/api/trending/github/history", githubTrendingHistoryHandler(dbPool))
+	r.Get("/api/trending/github/readme", githubTrendingReadmeHandler)
 
 	// --- Admin (auth + admin role required) ---
 	r.Group(func(r chi.Router) {
@@ -238,6 +239,9 @@ func githubTrendingScrapeHandler(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		capturedAt := time.Now()
+		for i := range items {
+			items[i].Readme = fetchGitHubReadme(ctx, items[i].Name)
+		}
 		_ = saveTrendingRun(ctx, db, items, capturedAt)
 		for i := range items {
 			items[i].CapturedAt = capturedAt
@@ -246,6 +250,22 @@ func githubTrendingScrapeHandler(db *pgxpool.Pool) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{"items": items})
 	}
+}
+
+func githubTrendingReadmeHandler(w http.ResponseWriter, r *http.Request) {
+	repo := strings.TrimSpace(r.URL.Query().Get("repo"))
+	if !strings.Contains(repo, "/") || strings.Contains(repo, "..") {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid repo"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"readme": fetchGitHubReadme(ctx, repo)})
 }
 
 func githubTrendingHistoryHandler(db *pgxpool.Pool) http.HandlerFunc {
@@ -382,7 +402,10 @@ func saveTrendingRun(ctx context.Context, db *pgxpool.Pool, items []persistedTre
 	}
 
 	for _, item := range newItems {
-		readme := fetchGitHubReadme(ctx, item.Name)
+		readme := item.Readme
+		if readme == "" {
+			readme = fetchGitHubReadme(ctx, item.Name)
+		}
 		if len(readme) > 30000 {
 			readme = readme[:30000]
 		}

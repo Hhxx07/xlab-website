@@ -14,6 +14,10 @@ import PixelTree from './components/PixelTree'
 import NewsBoard from './components/NewsBoard'
 import Player from './Player'
 import CameraRig from './CameraRig'
+import type { WorldCameraMode } from './CameraRig'
+import Decorations from './components/Decorations'
+import InteractionGlow from './components/InteractionGlow'
+import HouseSlot from './modules/HouseSlot'
 
 import KnowledgeHouse from './modules/KnowledgeHouse'
 import GameHouse from './modules/GameHouse'
@@ -22,7 +26,6 @@ import MovieHouse from './modules/MovieHouse'
 import NovelHouse from './modules/NovelHouse'
 import SportHouse from './modules/SportHouse'
 
-import { FREE_CAMERA } from '../../config/debug';
 import { DEBUG } from '../../config/debug';
 import { DEBUG_HOUSES } from '../../config/debug';
 
@@ -38,16 +41,15 @@ const moduleComponents = {
 export default function WorldScene({
   controls,
   preview = false,
-  debugCamera,
+  cameraMode = 'third',
 }: {
   controls: MutableRefObject<MovementInput>
   preview?: boolean
-  debugCamera?: boolean
+  cameraMode?: WorldCameraMode
 }) {
   const setActiveHotspot = useWorldStore((state) => state.setActiveHotspot)
+  const activeHotspot = useWorldStore((state) => state.activeHotspot)
   const lastHotspotId = useRef<string | null>(null)
-
-  const finalDebugCamera = debugCamera ?? FREE_CAMERA;
 
   useFrame(() => {
     if (!DEBUG.useHotspotFrame) return
@@ -77,13 +79,30 @@ export default function WorldScene({
 
   return (
     <>
-      <ambientLight intensity={1.5} />
-      <directionalLight position={[5, 8, 5]} intensity={2} />
+      <ambientLight intensity={0.62} />
+      <hemisphereLight args={['#fff8dc', '#7aa06b', 1.8]} />
+      <directionalLight
+        position={[8, 11, 5]}
+        intensity={2.8}
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-left={-18}
+        shadow-camera-right={18}
+        shadow-camera-top={18}
+        shadow-camera-bottom={-18}
+      />
+      <mesh position={[9.5, 10.5, -6]} castShadow>
+        <sphereGeometry args={[0.65, 32, 32]} />
+        <meshStandardMaterial color="#ffd36b" emissive="#ffb84d" emissiveIntensity={1.2} />
+      </mesh>
 
       {DEBUG.sky && <Sky />}
       {DEBUG.ground && <Ground />}
       {DEBUG.road && <Road />}
       {DEBUG.newsBoard && <NewsBoard />}
+      <Decorations />
+      <InteractionGlow hotspot={activeHotspot} />
 
       {DEBUG.houses &&
         worldModules.map((module) => {
@@ -99,7 +118,7 @@ export default function WorldScene({
 
           if (!shouldShow) return null
 
-          return <House key={module.id} position={module.position} />
+          return <HouseSlot key={module.id} position={module.position} modelUrl={module.modelUrl} Fallback={House} />
     })}
 
       {DEBUG.trees &&
@@ -117,7 +136,7 @@ export default function WorldScene({
         ))}
 
       {DEBUG.player && !preview && <Player controls={controls} />}
-      {!finalDebugCamera && <CameraRig />}
+      {cameraMode !== 'free' && <CameraRig mode={cameraMode} />}
     </>
   )
 }
