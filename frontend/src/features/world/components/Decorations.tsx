@@ -54,6 +54,17 @@ export default function Decorations() {
         <boxGeometry args={[0.16, 0.76, 0.16]} />
         <meshStandardMaterial color="#7a4a28" />
       </mesh>
+
+      <group position={[-1.45, 0, 6.72]}>
+        <mesh position={[0, 0.42, 0]} castShadow>
+          <boxGeometry args={[0.14, 0.84, 0.14]} />
+          <meshStandardMaterial color="#4b5563" />
+        </mesh>
+        <mesh position={[0, 0.92, 0]} castShadow>
+          <boxGeometry args={[0.42, 0.32, 0.42]} />
+          <meshStandardMaterial color="#fef3c7" emissive="#facc15" emissiveIntensity={0.35} />
+        </mesh>
+      </group>
     </group>
   )
 }

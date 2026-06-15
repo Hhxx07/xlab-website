@@ -1,6 +1,6 @@
 import type { WorldModuleId } from './worldModules'
 
-export type HotspotType = 'open_note' | 'open_news' | 'enter_house'
+export type HotspotType = 'open_note' | 'open_news' | 'enter_house' | 'toggle_night'
 
 export type WorldHotspot = {
   id: string
@@ -72,6 +72,15 @@ export const hotspots: WorldHotspot[] = [
     type: 'enter_house',
     noteSlug: 'life/dorm',
     interactionText: '短按 E 打开生活笔记',
+  },
+  {
+    id: 'night-switch',
+    module: 'life',
+    label: '夜灯开关',
+    position: [-1.45, 0, 6.72],
+    radius: 1.0,
+    type: 'toggle_night',
+    interactionText: '短按 E 切换白天 / 夜晚',
   },
   {
     id: 'life-shoes',

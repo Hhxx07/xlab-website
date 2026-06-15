@@ -3,7 +3,6 @@ import { useRef } from 'react'
 import * as THREE from 'three'
 import type { MutableRefObject } from 'react'
 import type { MovementInput } from './utils/isoDirection'
-import { getIsoMovement } from './utils/isoDirection'
 import { clampTownPosition } from './utils/distance'
 import { useWorldStore } from './store/worldStore'
 
@@ -22,6 +21,7 @@ export default function Player({
       initialPosition.current[2],
     ),
   )
+  const facingAngle = useRef(Math.atan2(useWorldStore.getState().playerDirection[0], useWorldStore.getState().playerDirection[2]))
   const setPlayerPosition = useWorldStore((state) => state.setPlayerPosition)
   const setPlayerDirection = useWorldStore((state) => state.setPlayerDirection)
   const movementEnabled = useWorldStore((state) => state.movementEnabled)
@@ -29,7 +29,22 @@ export default function Player({
   useFrame((_, delta) => {
     if (!group.current) return
 
-    const direction = movementEnabled ? getIsoMovement(controls.current) : { x: 0, z: 0 }
+    const turnInput = movementEnabled
+      ? Number(controls.current.right) - Number(controls.current.left)
+      : 0
+    const moveInput = movementEnabled
+      ? Number(controls.current.up) - Number(controls.current.down)
+      : 0
+
+    const turnSpeed = 2.45
+    if (turnInput !== 0) {
+      facingAngle.current -= turnInput * turnSpeed * delta
+    }
+
+    const direction = {
+      x: Math.sin(facingAngle.current) * moveInput,
+      z: Math.cos(facingAngle.current) * moveInput,
+    }
     const speed = 4.4
     const next: [number, number, number] = [
       positionRef.current[0] + direction.x * speed * delta,
@@ -38,17 +53,21 @@ export default function Player({
     ]
     const clamped = clampTownPosition(next)
 
-    if (direction.x !== 0 || direction.z !== 0) {
+    const facingDirection: [number, number, number] = [
+      Math.sin(facingAngle.current),
+      0,
+      Math.cos(facingAngle.current),
+    ]
+    setPlayerDirection(facingDirection)
+
+    if (moveInput !== 0) {
       positionRef.current = clamped
       setPlayerPosition(clamped)
-      setPlayerDirection([direction.x, 0, direction.z])
     }
 
     targetPosition.current.set(clamped[0], 0, clamped[2])
     group.current.position.lerp(targetPosition.current, 0.35)
-    if (direction.x !== 0 || direction.z !== 0) {
-      group.current.rotation.y = Math.atan2(direction.x, direction.z)
-    }
+    group.current.rotation.y = facingAngle.current
   })
 
   return (

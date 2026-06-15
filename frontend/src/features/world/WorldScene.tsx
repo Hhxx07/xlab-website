@@ -17,6 +17,9 @@ import CameraRig from './CameraRig'
 import type { WorldCameraMode } from './CameraRig'
 import Decorations from './components/Decorations'
 import InteractionGlow from './components/InteractionGlow'
+import Fence from './components/Fence'
+import CelestialWorld from './components/CelestialWorld'
+import TeleportAura from './components/TeleportAura'
 import HouseSlot from './modules/HouseSlot'
 
 import KnowledgeHouse from './modules/KnowledgeHouse'
@@ -42,13 +45,16 @@ export default function WorldScene({
   controls,
   preview = false,
   cameraMode = 'third',
+  teleportProgress = 0,
 }: {
   controls: MutableRefObject<MovementInput>
   preview?: boolean
   cameraMode?: WorldCameraMode
+  teleportProgress?: number
 }) {
   const setActiveHotspot = useWorldStore((state) => state.setActiveHotspot)
   const activeHotspot = useWorldStore((state) => state.activeHotspot)
+  const isNight = useWorldStore((state) => state.isNight)
   const lastHotspotId = useRef<string | null>(null)
 
   useFrame(() => {
@@ -79,11 +85,11 @@ export default function WorldScene({
 
   return (
     <>
-      <ambientLight intensity={0.62} />
-      <hemisphereLight args={['#fff8dc', '#7aa06b', 1.8]} />
+      <ambientLight intensity={isNight ? 0.24 : 0.62} />
+      <hemisphereLight args={[isNight ? '#c7d2fe' : '#fff8dc', '#3d5a45', isNight ? 0.62 : 1.8]} />
       <directionalLight
-        position={[8, 11, 5]}
-        intensity={2.8}
+        position={isNight ? [-7, 9, -5] : [8, 11, 5]}
+        intensity={isNight ? 0.72 : 2.8}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -92,17 +98,16 @@ export default function WorldScene({
         shadow-camera-top={18}
         shadow-camera-bottom={-18}
       />
-      <mesh position={[9.5, 10.5, -6]} castShadow>
-        <sphereGeometry args={[0.65, 32, 32]} />
-        <meshStandardMaterial color="#ffd36b" emissive="#ffb84d" emissiveIntensity={1.2} />
-      </mesh>
+      <CelestialWorld isNight={isNight} />
 
-      {DEBUG.sky && <Sky />}
+      {DEBUG.sky && <Sky isNight={isNight} />}
       {DEBUG.ground && <Ground />}
       {DEBUG.road && <Road />}
       {DEBUG.newsBoard && <NewsBoard />}
       <Decorations />
+      <Fence />
       <InteractionGlow hotspot={activeHotspot} />
+      <TeleportAura hotspot={activeHotspot} progress={teleportProgress} active={isNight} />
 
       {DEBUG.houses &&
         worldModules.map((module) => {

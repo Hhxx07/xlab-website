@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentType } from 'react'
+import { Suspense, useEffect, useState, type ComponentType } from 'react'
 import GLBHouse from './GLBHouse'
 
 type HouseProps = {
@@ -27,7 +27,17 @@ export default function HouseSlot({
 
     fetch(modelUrl, { method: 'HEAD' })
       .then((res) => {
-        if (alive) setModelAvailable(res.ok)
+        if (!alive) return
+        const contentType = res.headers.get('content-type') ?? ''
+        const contentLength = Number(res.headers.get('content-length') ?? '0')
+        const looksLikeModel =
+          res.ok &&
+          !contentType.includes('text/html') &&
+          (contentType.includes('model/gltf-binary') ||
+            contentType.includes('application/octet-stream') ||
+            contentType.includes('application/x-binary') ||
+            contentLength > 1024)
+        setModelAvailable(looksLikeModel)
       })
       .catch(() => {
         if (alive) setModelAvailable(false)
@@ -39,7 +49,11 @@ export default function HouseSlot({
   }, [modelUrl])
 
   if (modelUrl && modelAvailable) {
-    return <GLBHouse url={modelUrl} position={position} />
+    return (
+      <Suspense fallback={<Fallback position={position} />}>
+        <GLBHouse url={modelUrl} position={position} />
+      </Suspense>
+    )
   }
 
   return <Fallback position={position} />

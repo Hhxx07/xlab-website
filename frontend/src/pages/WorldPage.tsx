@@ -14,16 +14,23 @@ export default function WorldPage() {
   const activeNoteSlug = useWorldStore((state) => state.activeNoteSlug)
   const isNoteModalOpen = useWorldStore((state) => state.isNoteModalOpen)
   const isNewsModalOpen = useWorldStore((state) => state.isNewsModalOpen)
+  const isNight = useWorldStore((state) => state.isNight)
   const openNote = useWorldStore((state) => state.openNote)
   const openNews = useWorldStore((state) => state.openNews)
+  const toggleNight = useWorldStore((state) => state.toggleNight)
   const closeModal = useWorldStore((state) => state.closeModal)
   const [cameraMode, setCameraMode] = useState<WorldCameraMode>('third')
   const [holdProgress, setHoldProgress] = useState(0)
-  const [warping, setWarping] = useState(false)
   const [musicEnabled, setMusicEnabled] = useState(true)
 
   const openLocalContent = useCallback(() => {
+    if (isNoteModalOpen || isNewsModalOpen) return
     if (!activeHotspot) return
+
+    if (activeHotspot.type === 'toggle_night') {
+      toggleNight()
+      return
+    }
     if (activeHotspot.type === 'open_news') {
       openNews()
       return
@@ -31,18 +38,19 @@ export default function WorldPage() {
     if (activeHotspot.noteSlug) {
       openNote(activeHotspot.noteSlug)
     }
-  }, [activeHotspot, openNews, openNote])
+  }, [activeHotspot, isNewsModalOpen, isNoteModalOpen, openNews, openNote, toggleNight])
 
   const enterGaussianWorld = useCallback(() => {
-    if (!activeHotspot || activeHotspot.module === 'town') return
-    setWarping(true)
+    if (!activeHotspot || activeHotspot.module === 'town' || activeHotspot.type === 'toggle_night') return
+    if (!isNight) return
+
     window.setTimeout(() => {
       const pos = useWorldStore.getState().playerPosition
       navigate(`/world/gaussian/${activeHotspot.module}`, {
         state: { returnPosition: pos },
       })
     }, 620)
-  }, [activeHotspot, navigate])
+  }, [activeHotspot, isNight, navigate])
 
   const handleEscape = useCallback(() => {
     if (isNoteModalOpen || isNewsModalOpen) {
@@ -84,24 +92,13 @@ export default function WorldPage() {
     return () => window.removeEventListener('keydown', handleMusicToggle)
   }, [])
 
-  useEffect(() => {
-    const handleEnter = (event: KeyboardEvent) => {
-      if (event.code === 'Enter' && isNoteModalOpen && activeNoteSlug) {
-        navigate(`/notes/${activeNoteSlug}`)
-      }
-    }
-
-    window.addEventListener('keydown', handleEnter)
-    return () => window.removeEventListener('keydown', handleEnter)
-  }, [activeNoteSlug, isNoteModalOpen, navigate])
-
   return (
     <div className="fixed inset-0 overflow-hidden bg-sky-100">
-      <WorldCanvas controls={controls} cameraMode={cameraMode} />
+      <WorldCanvas controls={controls} cameraMode={cameraMode} teleportProgress={holdProgress} />
 
       <div className="pointer-events-none fixed left-5 top-5 z-30 rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-sm backdrop-blur">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-700">XLab</p>
-        <h1 className="mt-1 text-lg font-black text-slate-950">像素小镇</h1>
+        <h1 className="mt-1 text-lg font-black text-slate-950">像素小镇 · {isNight ? '夜晚' : '白天'}</h1>
       </div>
 
       <Link
@@ -128,8 +125,9 @@ export default function WorldPage() {
 
       <div className="fixed bottom-5 left-5 z-30 max-w-xs rounded-2xl border border-white/70 bg-white/85 p-4 text-sm text-slate-700 shadow-sm backdrop-blur">
         <p className="font-black text-slate-950">控制</p>
-        <p className="mt-2">WASD / 方向键：移动</p>
-        <p>E：短按打开笔记，长按进入高斯世界</p>
+        <p className="mt-2">W/S：按人物朝向前进 / 后退</p>
+        <p>A/D：转向</p>
+        <p>E：短按打开笔记，夜晚长按进入高斯世界</p>
         <p>M：音乐 {musicEnabled ? '开' : '关'}</p>
         <p>Esc：关闭窗口 / 返回首页</p>
       </div>
@@ -143,13 +141,7 @@ export default function WorldPage() {
         M
       </button>
 
-      {warping && (
-        <div className="pointer-events-none fixed inset-0 z-[70] grid place-items-center bg-[radial-gradient(circle,#fef3c7_0%,rgba(56,189,248,0.42)_38%,rgba(15,23,42,0.72)_100%)] text-sm font-black uppercase tracking-[0.18em] text-white backdrop-blur-md">
-          穿梭中
-        </div>
-      )}
-
-      <InteractionPrompt hotspot={activeHotspot} holdProgress={holdProgress} />
+      <InteractionPrompt hotspot={activeHotspot} holdProgress={holdProgress} isNight={isNight} />
       <NoteModal noteSlug={activeNoteSlug} showNews={isNewsModalOpen} onClose={closeModal} />
     </div>
   )

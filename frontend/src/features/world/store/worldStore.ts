@@ -8,6 +8,7 @@ type WorldState = {
   playerPosition: [number, number, number]
   playerDirection: [number, number, number]
   currentScene: SceneId
+  isNight: boolean
   activeHotspot: WorldHotspot | null
   activeNoteSlug: string | null
   isNoteModalOpen: boolean
@@ -17,6 +18,7 @@ type WorldState = {
   setPlayerPosition: (position: [number, number, number]) => void
   setPlayerDirection: (direction: [number, number, number]) => void
   setActiveHotspot: (hotspot: WorldHotspot | null) => void
+  toggleNight: () => void
   openNote: (slug: string) => void
   openNews: () => void
   closeModal: () => void
@@ -28,6 +30,7 @@ export const useWorldStore = create<WorldState>((set) => ({
   playerPosition: [0, 0, 0],
   playerDirection: [0, 0, 1],
   currentScene: 'town',
+  isNight: false,
   activeHotspot: null,
   activeNoteSlug: null,
   isNoteModalOpen: false,
@@ -55,6 +58,8 @@ export const useWorldStore = create<WorldState>((set) => ({
       }
       return { activeHotspot: hotspot }
     }),
+  toggleNight: () =>
+    set((state) => ({ isNight: !state.isNight })),
   openNote: (slug) =>
     set({
       activeNoteSlug: slug,
@@ -66,10 +71,12 @@ export const useWorldStore = create<WorldState>((set) => ({
     set({
       isNewsModalOpen: true,
       isNoteModalOpen: false,
+      activeNoteSlug: null,
       movementEnabled: false,
     }),
   closeModal: () =>
     set({
+      activeNoteSlug: null,
       isNoteModalOpen: false,
       isNewsModalOpen: false,
       movementEnabled: true,

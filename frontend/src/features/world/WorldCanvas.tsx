@@ -20,10 +20,12 @@ export default function WorldCanvas({
   controls = emptyControls,
   preview = false,
   cameraMode = 'third',
+  teleportProgress = 0,
 }: {
   controls?: MutableRefObject<MovementInput>
   preview?: boolean
   cameraMode?: WorldCameraMode
+  teleportProgress?: number
 }) {
   const useFreeCamera = cameraMode === 'free'
   const usePerspective = cameraMode === 'free' || cameraMode === 'third'
@@ -74,7 +76,7 @@ export default function WorldCanvas({
         />
       )}
 
-      <WorldScene controls={controls} preview={preview} cameraMode={cameraMode} />
+      <WorldScene controls={controls} preview={preview} cameraMode={cameraMode} teleportProgress={teleportProgress} />
     </Canvas>
   )
 }
