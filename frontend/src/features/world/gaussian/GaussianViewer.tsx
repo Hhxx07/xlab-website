@@ -48,7 +48,7 @@ interface ThreeBridge {
   state: GSState
   updateUniforms: () => void
   autoFocusCamera: () => void
-  geometryData: { count: number } | null
+  geometryData: { count: number; center?: THREE.Vector3; radius?: number } | null
   rawPlyData: ArrayBuffer | null
   downloadModel: () => void
 }

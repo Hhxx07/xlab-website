@@ -1,13 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
-const navItems = [
-  { label: '主页', to: '/', subLabel: 'Main', icon: HomeIcon },
-  { label: '热门', to: '/hot', subLabel: 'Trending', icon: HotIcon },
-  { label: '学习', to: '/study', subLabel: 'Study', icon: StudyIcon },
-  { label: '有趣', to: '/fun', subLabel: 'Fun', icon: FunIcon },
-]
-
 export default function Navbar() {
   const { user, isAuthenticated, logout, isLoading } = useAuthStore()
   const navigate = useNavigate()
@@ -29,24 +22,6 @@ export default function Navbar() {
             <span className="hidden text-xs font-medium text-[var(--text-soft)] sm:block">小地方，也舒服</span>
           </span>
         </Link>
-
-        <div className="hidden items-center gap-2 lg:flex">
-          {navItems.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className="group flex items-center gap-2 rounded-[14px] px-3 py-2 text-sm font-semibold text-slate-500 transition-all hover:bg-white/80 hover:text-[var(--text-main)]"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/50 text-slate-400 transition group-hover:text-[var(--green-main)]">
-                <item.icon />
-              </span>
-              <span>
-                <span className="block leading-4">{item.label}</span>
-                <span className="block text-[11px] font-medium text-slate-400">{item.subLabel}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
 
         <div className="flex items-center gap-3">
           {!isLoading && !isAuthenticated && (
@@ -94,41 +69,5 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
-  )
-}
-
-function HomeIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 10.2 12 3l9 7.2V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />
-    </svg>
-  )
-}
-
-function HotIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3c-2.2 3.2-5 6.1-5 10.3A5 5 0 0 0 12 18a5 5 0 0 0 5-4.7C17 9.1 14.2 6.2 12 3Z" />
-      <path d="M12 12c-.9 1.3-1.5 2.2-1.5 3.1a1.5 1.5 0 0 0 3 0c0-.9-.6-1.8-1.5-3.1Z" />
-    </svg>
-  )
-}
-
-function StudyIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 19.5A2.5 2.5 0 0 1 7.5 17H20" />
-      <path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v20H7.5A2.5 2.5 0 0 1 5 19.5z" />
-      <path d="M9 7h7M9 11h5" />
-    </svg>
-  )
-}
-
-function FunIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="7" width="18" height="11" rx="3" />
-      <path d="M8 12h3M9.5 10.5v3M15 11.5h.01M17.5 13.5h.01" />
-    </svg>
   )
 }

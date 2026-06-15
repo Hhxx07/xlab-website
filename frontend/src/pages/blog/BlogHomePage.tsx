@@ -50,6 +50,12 @@ const NOSE_FIREWORK_DEBUG = {
   maxCombo: 6,
   comboWindowMs: 900,
   longPressMs: 3000,
+  fireworkLifeMs: 1250,
+}
+
+type NoseFirework = {
+  id: number
+  scale: number
 }
 
 export default function BlogHomePage() {
@@ -124,13 +130,22 @@ function XlabEasterEggBanner({ onClose }: { onClose: () => void }) {
 function HeroSection() {
   const navigate = useNavigate()
   const [enteringTown, setEnteringTown] = useState(false)
-  const [fireworkKey, setFireworkKey] = useState(0)
-  const [fireworkScale, setFireworkScale] = useState(NOSE_FIREWORK_DEBUG.baseScale)
+  const [fireworks, setFireworks] = useState<NoseFirework[]>([])
   const noseTimer = useRef<number | null>(null)
   const noseStartedAt = useRef<number | null>(null)
   const noseLongPressed = useRef(false)
   const noseCombo = useRef(0)
   const lastNoseFireworkAt = useRef(0)
+  const fireworkTimers = useRef<Set<number>>(new Set())
+  const fireworkId = useRef(0)
+
+  useEffect(() => {
+    return () => {
+      if (noseTimer.current !== null) window.clearTimeout(noseTimer.current)
+      fireworkTimers.current.forEach((timer) => window.clearTimeout(timer))
+      fireworkTimers.current.clear()
+    }
+  }, [])
 
   const enterTown = () => {
     setEnteringTown(true)
@@ -168,12 +183,19 @@ function HeroSection() {
       : 1
     lastNoseFireworkAt.current = now
     const holdRatio = Math.min(pressedMs / NOSE_FIREWORK_DEBUG.longPressMs, 1)
-    setFireworkScale(
+    const id = fireworkId.current + 1
+    fireworkId.current = id
+    const scale =
       NOSE_FIREWORK_DEBUG.baseScale
       + holdRatio * NOSE_FIREWORK_DEBUG.holdScale
-      + (noseCombo.current - 1) * NOSE_FIREWORK_DEBUG.comboScale,
-    )
-    setFireworkKey(Date.now())
+      + (noseCombo.current - 1) * NOSE_FIREWORK_DEBUG.comboScale
+
+    setFireworks((items) => [...items, { id, scale }])
+    const removeTimer = window.setTimeout(() => {
+      setFireworks((items) => items.filter((item) => item.id !== id))
+      fireworkTimers.current.delete(removeTimer)
+    }, NOSE_FIREWORK_DEBUG.fireworkLifeMs)
+    fireworkTimers.current.add(removeTimer)
   }
 
   return (
@@ -194,24 +216,23 @@ function HeroSection() {
         onPointerCancel={clearNoseTimer}
         onPointerLeave={clearNoseTimer}
       >
-        <span
-          key={fireworkKey}
-          className="home-nose-firework"
-          style={{ '--firework-scale': fireworkScale } as CSSProperties}
-          aria-hidden="true"
-        >
-          {Array.from({ length: NOSE_FIREWORK_DEBUG.particleCount }).map((_, index) => (
-            <i
-              key={index}
-              style={{
-                '--angle': `${index * (360 / NOSE_FIREWORK_DEBUG.particleCount)}deg`,
-                '--distance': `${NOSE_FIREWORK_DEBUG.baseDistance + (index % 5) * NOSE_FIREWORK_DEBUG.distanceStep}px`,
-                '--delay': `${(index % 6) * 18}ms`,
-                '--particle-size': `${NOSE_FIREWORK_DEBUG.particleSize}px`,
-              } as CSSProperties}
+        {fireworks.map((firework) => (
+          <span
+            key={firework.id}
+            className="home-nose-firework"
+            style={{ '--firework-scale': firework.scale } as CSSProperties}
+            aria-hidden="true"
+          >
+            {Array.from({ length: NOSE_FIREWORK_DEBUG.particleCount }).map((_, index) => (
+              <i
+                key={index}
+                style={{
+                ...getNoseParticleStyle(index),
+              }}
             />
           ))}
         </span>
+        ))}
       </button>
 
       <div className="relative z-10 flex h-full items-center px-7 py-10 sm:px-12 lg:px-16">
@@ -250,6 +271,18 @@ function HeroSection() {
       )}
     </section>
   )
+}
+
+function getNoseParticleStyle(index: number): CSSProperties {
+  const angle = (index * Math.PI * 2) / NOSE_FIREWORK_DEBUG.particleCount
+  const distance = NOSE_FIREWORK_DEBUG.baseDistance + (index % 5) * NOSE_FIREWORK_DEBUG.distanceStep
+
+  return {
+    '--x': `${Math.cos(angle) * distance}px`,
+    '--y': `${Math.sin(angle) * distance}px`,
+    '--delay': `${(index % 6) * 18}ms`,
+    '--particle-size': `${NOSE_FIREWORK_DEBUG.particleSize}px`,
+  } as CSSProperties
 }
 
 function IntroNoteSection() {
