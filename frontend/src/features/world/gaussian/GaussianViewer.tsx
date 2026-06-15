@@ -117,7 +117,15 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
     let camera: THREE.PerspectiveCamera
     let renderer: THREE.WebGLRenderer
     let splatMesh: THREE.Mesh | null = null
-    let geometryData: { count: number; pos: Float32Array; rot: Float32Array; scale: Float32Array; col: Float32Array; center?: THREE.Vector3 } | null = null
+    let geometryData: {
+      count: number
+      pos: Float32Array
+      rot: Float32Array
+      scale: Float32Array
+      col: Float32Array
+      center?: THREE.Vector3
+      radius?: number
+    } | null = null
     let rawPlyData: ArrayBuffer | null = null
     const clock = new THREE.Clock()
     let animFrameId = 0
@@ -313,6 +321,60 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
       return !head.startsWith('ply')
     }
 
+    function measureGeometry(pos: Float32Array, count: number) {
+      const min = new THREE.Vector3(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY)
+      const max = new THREE.Vector3(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY)
+
+      for (let i = 0; i < count; i++) {
+        const offset = i * 3
+        const x = pos[offset]
+        const y = pos[offset + 1]
+        const z = pos[offset + 2]
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue
+        min.x = Math.min(min.x, x)
+        min.y = Math.min(min.y, y)
+        min.z = Math.min(min.z, z)
+        max.x = Math.max(max.x, x)
+        max.y = Math.max(max.y, y)
+        max.z = Math.max(max.z, z)
+      }
+
+      const center = new THREE.Vector3().addVectors(min, max).multiplyScalar(0.5)
+      let radiusSq = 0
+      for (let i = 0; i < count; i++) {
+        const offset = i * 3
+        const dx = pos[offset] - center.x
+        const dy = pos[offset + 1] - center.y
+        const dz = pos[offset + 2] - center.z
+        radiusSq = Math.max(radiusSq, dx * dx + dy * dy + dz * dz)
+      }
+
+      return {
+        center,
+        radius: Math.max(1, Math.sqrt(radiusSq) || 10),
+      }
+    }
+
+    function getSceneModelCenter() {
+      const center = geometryData?.center?.clone() ?? new THREE.Vector3()
+      return center.applyEuler(new THREE.Euler(Math.PI, 0, 0))
+    }
+
+    function getSceneModelRadius() {
+      return Math.max(1, geometryData?.radius ?? 10)
+    }
+
+    function getDistanceSpeedFactor() {
+      if (!geometryData) return 1
+      const center = getSceneModelCenter()
+      const radius = getSceneModelRadius()
+      const distance = camera.position.distanceTo(center)
+      const near = radius * 0.72
+      const far = radius * 2.45
+      const t = THREE.MathUtils.clamp((distance - near) / Math.max(0.001, far - near), 0, 1)
+      return THREE.MathUtils.lerp(0.16, 1, t)
+    }
+
     function parseSplat(buffer: ArrayBuffer) {
       setLoadingText('正在解析 splat 数据')
       const rowSize = 32
@@ -325,7 +387,6 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
       const rotBuffer = new Float32Array(count * 4)
       const scaleBuffer = new Float32Array(count * 3)
       const colBuffer = new Float32Array(count * 4)
-      const center = new THREE.Vector3()
 
       let write = 0
       for (let i = 0; i < sourceCount; i += stride) {
@@ -362,18 +423,18 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
         colBuffer[colOffset + 1] = view.getUint8(base + 25) / 255
         colBuffer[colOffset + 2] = view.getUint8(base + 26) / 255
         colBuffer[colOffset + 3] = Math.max(0.04, view.getUint8(base + 27) / 255)
-        center.add(new THREE.Vector3(px, py, pz))
         write += 1
       }
 
-      center.multiplyScalar(1 / Math.max(1, write))
+      const bounds = measureGeometry(posBuffer, write)
       geometryData = {
         count: write,
         pos: posBuffer.subarray(0, write * 3),
         rot: rotBuffer.subarray(0, write * 4),
         scale: scaleBuffer.subarray(0, write * 3),
         col: colBuffer.subarray(0, write * 4),
-        center,
+        center: bounds.center,
+        radius: bounds.radius,
       }
       setStats((prev) => ({ ...prev, points: write.toLocaleString() }))
     }
@@ -482,12 +543,17 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
         fileOffset += vertexStride
       }
 
+      const pos = posBuffer.slice(0, validCount * 3)
+      const bounds = measureGeometry(pos, validCount)
+
       geometryData = {
         count: validCount,
-        pos: posBuffer.slice(0, validCount * 3),
+        pos,
         rot: rotBuffer.slice(0, validCount * 4),
         scale: scaleBuffer.slice(0, validCount * 3),
         col: colBuffer.slice(0, validCount * 4),
+        center: bounds.center,
+        radius: bounds.radius,
       }
 
       const pointsStr = validCount >= 1e6
@@ -610,15 +676,13 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
     // ---- 自动对焦 ----
     function autoFocusCamera() {
       if (!geometryData || !splatMesh) return
-      let d = 0
-      const p = geometryData.pos
-      const n = Math.min(300, geometryData.count * 3)
-      for (let i = 0; i < n; i += 3) {
-        d += Math.sqrt(p[i] * p[i] + p[i + 1] * p[i + 1] + p[i + 2] * p[i + 2])
-      }
-      const radius = (d / 100) || 10
-      camera.position.set(0, 0, radius * 3)
-      camera.lookAt(0, 0, 0)
+      const center = getSceneModelCenter()
+      const radius = getSceneModelRadius()
+      const viewDistance = THREE.MathUtils.clamp(radius * 1.7, 4.5, 42)
+      const viewHeight = THREE.MathUtils.clamp(radius * 0.18, 0.8, 8)
+
+      camera.position.set(center.x, center.y + viewHeight, center.z + viewDistance)
+      camera.lookAt(center)
       physics.targetRot.setFromQuaternion(camera.quaternion, 'YXZ')
       physics.currRot.copy(physics.targetRot)
       physics.velocity.set(0, 0, 0)
@@ -674,8 +738,9 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
       if (_vMoveDir.lengthSq() > 0) _vMoveDir.normalize()
 
       const st = bridgeRef.current.state
-      const maxSpeed = st.flySpeed * (physics.boost ? 4.0 : 1.0)
-      const acceleration = 100.0
+      const distanceFactor = getDistanceSpeedFactor()
+      const maxSpeed = st.flySpeed * distanceFactor * (physics.boost ? 2.2 : 1.0)
+      const acceleration = 100.0 * distanceFactor
       const friction = 10.0
 
       if (_vMoveDir.lengthSq() > 0) {
