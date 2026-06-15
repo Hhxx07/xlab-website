@@ -51,7 +51,7 @@ export default function Player({
       0,
       positionRef.current[2] + direction.z * speed * delta,
     ]
-    const clamped = clampTownPosition(next)
+    const clamped = clampTownPosition(next, positionRef.current)
 
     const facingDirection: [number, number, number] = [
       Math.sin(facingAngle.current),
