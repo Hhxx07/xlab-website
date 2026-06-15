@@ -5,7 +5,8 @@ export default function HouseDetails({ isNight }: { isNight: boolean }) {
     <group>
       {worldModules.map((module, index) => {
         const [x, , z] = module.position
-        const frontZ = module.id === 'life' ? z - 1.02 : z + 1.02
+        const facesSouth = module.id === 'knowledge' || module.id === 'game' || module.id === 'life'
+        const frontZ = facesSouth ? z - 1.02 : z + 1.02
 
         return (
           <group key={module.id}>
@@ -17,7 +18,7 @@ export default function HouseDetails({ isNight }: { isNight: boolean }) {
               <boxGeometry args={[0.12, 0.58, 0.08]} />
               <meshStandardMaterial color="#6b4a32" />
             </mesh>
-            <mesh position={[x, 0.07, frontZ + (module.id === 'life' ? -0.28 : 0.28)]} receiveShadow>
+            <mesh position={[x, 0.07, frontZ + (facesSouth ? -0.28 : 0.28)]} receiveShadow>
               <boxGeometry args={[1.35, 0.08, 0.5]} />
               <meshStandardMaterial color="#b88756" roughness={0.8} />
             </mesh>

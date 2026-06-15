@@ -25,6 +25,7 @@ export default function WorldPage() {
   const [shortPulseKey, setShortPulseKey] = useState(0)
   const [teleportHotspot, setTeleportHotspot] = useState<WorldHotspot | null>(null)
   const [teleportActive, setTeleportActive] = useState(false)
+  const [uiHidden, setUiHidden] = useState(true)
 
   const triggerShortPulse = useCallback(() => {
     setShortPulseKey(Date.now())
@@ -73,7 +74,11 @@ export default function WorldPage() {
     navigate('/')
   }, [closeModal, isNewsModalOpen, isNoteModalOpen, navigate])
 
-  const controls = useKeyboardControls(openLocalContent, handleEscape, handleLongAction)
+  const toggleUi = useCallback(() => {
+    setUiHidden((value) => !value)
+  }, [])
+
+  const controls = useKeyboardControls(openLocalContent, handleEscape, handleLongAction, undefined, toggleUi)
 
   useEffect(() => {
     audioRef.current = new Audio('/world/audio/town-theme.mp3')
@@ -115,52 +120,56 @@ export default function WorldPage() {
         teleportActive={teleportActive}
       />
 
-      <div className="pointer-events-none fixed left-5 top-5 z-30 rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-sm backdrop-blur">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-700">XLab</p>
-        <h1 className="mt-1 text-lg font-black text-slate-950">像素小镇 · {isNight ? '夜晚' : '白天'}</h1>
-      </div>
+      {!uiHidden && (
+        <>
+          <div className="pointer-events-none fixed left-5 top-5 z-30 rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-sm backdrop-blur">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-700">XLab</p>
+            <h1 className="mt-1 text-lg font-black text-slate-950">像素小镇 · {isNight ? '夜晚' : '白天'}</h1>
+          </div>
 
-      <Link
-        to="/"
-        className="fixed right-5 top-5 z-30 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-bold text-slate-950 shadow-sm backdrop-blur transition-colors hover:bg-white"
-      >
-        返回首页
-      </Link>
-
-      <div className="fixed right-5 top-20 z-30 flex overflow-hidden rounded-full border border-white/70 bg-white/85 p-1 shadow-sm backdrop-blur">
-        {(['third', 'fixed', 'free'] as const).map((mode) => (
-          <button
-            key={mode}
-            type="button"
-            onClick={() => setCameraMode(mode)}
-            className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
-              cameraMode === mode ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-white'
-            }`}
+          <Link
+            to="/"
+            className="fixed right-5 top-5 z-30 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-bold text-slate-950 shadow-sm backdrop-blur transition-colors hover:bg-white"
           >
-            {mode === 'third' ? '第三人称' : mode === 'fixed' ? '固定' : '自由'}
+            返回首页
+          </Link>
+
+          <div className="fixed right-5 top-20 z-30 flex overflow-hidden rounded-full border border-white/70 bg-white/85 p-1 shadow-sm backdrop-blur">
+            {(['third', 'fixed', 'free'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setCameraMode(mode)}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                  cameraMode === mode ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-white'
+                }`}
+              >
+                {mode === 'third' ? '第三人称' : mode === 'fixed' ? '固定' : '自由'}
+              </button>
+            ))}
+          </div>
+
+          <div className="fixed bottom-5 left-5 z-30 max-w-xs rounded-2xl border border-white/70 bg-white/85 p-4 text-sm text-slate-700 shadow-sm backdrop-blur">
+            <p className="font-black text-slate-950">控制</p>
+            <p className="mt-2">W/S：按人物朝向前进 / 后退</p>
+            <p>A/D：转向</p>
+            <p>E：短按打开笔记；靠近夜灯时互动；夜晚可进入高斯世界</p>
+            <p>M：音乐 {musicEnabled ? '开' : '关'}</p>
+            <p>Esc：关闭窗口 / 返回首页</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMusicEnabled((value) => !value)}
+            className="fixed right-5 bottom-5 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-white/88 text-sm font-black text-slate-800 shadow-sm backdrop-blur transition hover:bg-white"
+            aria-label="toggle music"
+          >
+            M
           </button>
-        ))}
-      </div>
 
-      <div className="fixed bottom-5 left-5 z-30 max-w-xs rounded-2xl border border-white/70 bg-white/85 p-4 text-sm text-slate-700 shadow-sm backdrop-blur">
-        <p className="font-black text-slate-950">控制</p>
-        <p className="mt-2">W/S：按人物朝向前进 / 后退</p>
-        <p>A/D：转向</p>
-        <p>E：短按打开笔记；靠近夜灯时互动；夜晚可进入高斯世界</p>
-        <p>M：音乐 {musicEnabled ? '开' : '关'}</p>
-        <p>Esc：关闭窗口 / 返回首页</p>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => setMusicEnabled((value) => !value)}
-        className="fixed right-5 bottom-5 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-white/88 text-sm font-black text-slate-800 shadow-sm backdrop-blur transition hover:bg-white"
-        aria-label="toggle music"
-      >
-        M
-      </button>
-
-      <InteractionPrompt hotspot={activeHotspot} />
+          <InteractionPrompt hotspot={activeHotspot} />
+        </>
+      )}
       <NoteModal noteSlug={activeNoteSlug} showNews={isNewsModalOpen} onClose={closeModal} />
     </div>
   )
