@@ -19,7 +19,9 @@ import Decorations from './components/Decorations'
 import InteractionGlow from './components/InteractionGlow'
 import Fence from './components/Fence'
 import CelestialWorld from './components/CelestialWorld'
-import TeleportAura from './components/TeleportAura'
+import ShortPressBurst from './components/ShortPressBurst'
+import TeleportFireworks from './components/TeleportFireworks'
+import HouseDetails from './components/HouseDetails'
 import HouseSlot from './modules/HouseSlot'
 
 import KnowledgeHouse from './modules/KnowledgeHouse'
@@ -45,12 +47,16 @@ export default function WorldScene({
   controls,
   preview = false,
   cameraMode = 'third',
-  teleportProgress = 0,
+  shortPulseKey = 0,
+  teleportHotspot = null,
+  teleportActive = false,
 }: {
   controls: MutableRefObject<MovementInput>
   preview?: boolean
   cameraMode?: WorldCameraMode
-  teleportProgress?: number
+  shortPulseKey?: number
+  teleportHotspot?: WorldHotspot | null
+  teleportActive?: boolean
 }) {
   const setActiveHotspot = useWorldStore((state) => state.setActiveHotspot)
   const activeHotspot = useWorldStore((state) => state.activeHotspot)
@@ -107,7 +113,8 @@ export default function WorldScene({
       <Decorations />
       <Fence />
       <InteractionGlow hotspot={activeHotspot} />
-      <TeleportAura hotspot={activeHotspot} progress={teleportProgress} active={isNight} />
+      <ShortPressBurst hotspot={activeHotspot} pulseKey={shortPulseKey} />
+      <TeleportFireworks hotspot={teleportHotspot} active={teleportActive} />
 
       {DEBUG.houses &&
         worldModules.map((module) => {
@@ -125,6 +132,7 @@ export default function WorldScene({
 
           return <HouseSlot key={module.id} position={module.position} modelUrl={module.modelUrl} Fallback={House} />
     })}
+      <HouseDetails isNight={isNight} />
 
       {DEBUG.trees &&
         [

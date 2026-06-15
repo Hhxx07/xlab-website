@@ -5,6 +5,7 @@ import InteractionPrompt from '../features/world/components/InteractionPrompt'
 import NoteModal from '../features/world/components/NoteModal'
 import type { WorldCameraMode } from '../features/world/CameraRig'
 import { useKeyboardControls } from '../features/world/controls/useKeyboardControls'
+import type { WorldHotspot } from '../features/world/data/hotspots'
 import { useWorldStore } from '../features/world/store/worldStore'
 
 export default function WorldPage() {
@@ -20,37 +21,49 @@ export default function WorldPage() {
   const toggleNight = useWorldStore((state) => state.toggleNight)
   const closeModal = useWorldStore((state) => state.closeModal)
   const [cameraMode, setCameraMode] = useState<WorldCameraMode>('third')
-  const [holdProgress, setHoldProgress] = useState(0)
   const [musicEnabled, setMusicEnabled] = useState(true)
+  const [shortPulseKey, setShortPulseKey] = useState(0)
+  const [teleportHotspot, setTeleportHotspot] = useState<WorldHotspot | null>(null)
+  const [teleportActive, setTeleportActive] = useState(false)
+
+  const triggerShortPulse = useCallback(() => {
+    setShortPulseKey(Date.now())
+  }, [])
 
   const openLocalContent = useCallback(() => {
     if (isNoteModalOpen || isNewsModalOpen) return
     if (!activeHotspot) return
 
-    if (activeHotspot.type === 'toggle_night') {
-      toggleNight()
-      return
-    }
+    triggerShortPulse()
     if (activeHotspot.type === 'open_news') {
       openNews()
       return
     }
-    if (activeHotspot.noteSlug) {
+    if (activeHotspot.type !== 'toggle_night' && activeHotspot.noteSlug) {
       openNote(activeHotspot.noteSlug)
     }
-  }, [activeHotspot, isNewsModalOpen, isNoteModalOpen, openNews, openNote, toggleNight])
+  }, [activeHotspot, isNewsModalOpen, isNoteModalOpen, openNews, openNote, triggerShortPulse])
 
-  const enterGaussianWorld = useCallback(() => {
-    if (!activeHotspot || activeHotspot.module === 'town' || activeHotspot.type === 'toggle_night') return
-    if (!isNight) return
+  const handleLongAction = useCallback(() => {
+    if (!activeHotspot || isNoteModalOpen || isNewsModalOpen) return
 
+    if (activeHotspot.type === 'toggle_night') {
+      triggerShortPulse()
+      toggleNight()
+      return
+    }
+
+    if (!isNight || activeHotspot.module === 'town') return
+
+    setTeleportHotspot(activeHotspot)
+    setTeleportActive(true)
     window.setTimeout(() => {
       const pos = useWorldStore.getState().playerPosition
       navigate(`/world/gaussian/${activeHotspot.module}`, {
         state: { returnPosition: pos },
       })
-    }, 620)
-  }, [activeHotspot, isNight, navigate])
+    }, 1320)
+  }, [activeHotspot, isNewsModalOpen, isNight, isNoteModalOpen, navigate, toggleNight, triggerShortPulse])
 
   const handleEscape = useCallback(() => {
     if (isNoteModalOpen || isNewsModalOpen) {
@@ -60,7 +73,7 @@ export default function WorldPage() {
     navigate('/')
   }, [closeModal, isNewsModalOpen, isNoteModalOpen, navigate])
 
-  const controls = useKeyboardControls(openLocalContent, handleEscape, enterGaussianWorld, setHoldProgress)
+  const controls = useKeyboardControls(openLocalContent, handleEscape, handleLongAction)
 
   useEffect(() => {
     audioRef.current = new Audio('/world/audio/town-theme.mp3')
@@ -94,7 +107,13 @@ export default function WorldPage() {
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-sky-100">
-      <WorldCanvas controls={controls} cameraMode={cameraMode} teleportProgress={holdProgress} />
+      <WorldCanvas
+        controls={controls}
+        cameraMode={cameraMode}
+        shortPulseKey={shortPulseKey}
+        teleportHotspot={teleportHotspot}
+        teleportActive={teleportActive}
+      />
 
       <div className="pointer-events-none fixed left-5 top-5 z-30 rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-sm backdrop-blur">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-700">XLab</p>
@@ -127,7 +146,7 @@ export default function WorldPage() {
         <p className="font-black text-slate-950">控制</p>
         <p className="mt-2">W/S：按人物朝向前进 / 后退</p>
         <p>A/D：转向</p>
-        <p>E：短按打开笔记，夜晚长按进入高斯世界</p>
+        <p>E：短按打开笔记；靠近夜灯时互动；夜晚可进入高斯世界</p>
         <p>M：音乐 {musicEnabled ? '开' : '关'}</p>
         <p>Esc：关闭窗口 / 返回首页</p>
       </div>
@@ -141,7 +160,7 @@ export default function WorldPage() {
         M
       </button>
 
-      <InteractionPrompt hotspot={activeHotspot} holdProgress={holdProgress} isNight={isNight} />
+      <InteractionPrompt hotspot={activeHotspot} />
       <NoteModal noteSlug={activeNoteSlug} showNews={isNewsModalOpen} onClose={closeModal} />
     </div>
   )

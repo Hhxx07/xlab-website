@@ -308,6 +308,76 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
     let loadingSys: LoadingGameSystem | null = null
 
     // ---- PLY 解析 ----
+    function isBinarySplat(buffer: ArrayBuffer) {
+      const head = new TextDecoder().decode(new Uint8Array(buffer, 0, Math.min(buffer.byteLength, 16)))
+      return !head.startsWith('ply')
+    }
+
+    function parseSplat(buffer: ArrayBuffer) {
+      setLoadingText('正在解析 splat 数据')
+      const rowSize = 32
+      const sourceCount = Math.floor(buffer.byteLength / rowSize)
+      const maxCount = Math.min(sourceCount, 650000)
+      const stride = sourceCount > maxCount ? Math.ceil(sourceCount / maxCount) : 1
+      const count = Math.ceil(sourceCount / stride)
+      const view = new DataView(buffer)
+      const posBuffer = new Float32Array(count * 3)
+      const rotBuffer = new Float32Array(count * 4)
+      const scaleBuffer = new Float32Array(count * 3)
+      const colBuffer = new Float32Array(count * 4)
+      const center = new THREE.Vector3()
+
+      let write = 0
+      for (let i = 0; i < sourceCount; i += stride) {
+        const base = i * rowSize
+        const px = view.getFloat32(base, true)
+        const py = view.getFloat32(base + 4, true)
+        const pz = view.getFloat32(base + 8, true)
+        const sx = Math.max(0.01, view.getFloat32(base + 12, true))
+        const sy = Math.max(0.01, view.getFloat32(base + 16, true))
+        const sz = Math.max(0.01, view.getFloat32(base + 20, true))
+        const q = new THREE.Quaternion(
+          (view.getUint8(base + 28) - 128) / 128,
+          (view.getUint8(base + 29) - 128) / 128,
+          (view.getUint8(base + 30) - 128) / 128,
+          (view.getUint8(base + 31) - 128) / 128,
+        ).normalize()
+
+        const offset = write * 3
+        posBuffer[offset] = px
+        posBuffer[offset + 1] = py
+        posBuffer[offset + 2] = pz
+        scaleBuffer[offset] = sx
+        scaleBuffer[offset + 1] = sy
+        scaleBuffer[offset + 2] = sz
+
+        const rotOffset = write * 4
+        rotBuffer[rotOffset] = q.x
+        rotBuffer[rotOffset + 1] = q.y
+        rotBuffer[rotOffset + 2] = q.z
+        rotBuffer[rotOffset + 3] = q.w
+
+        const colOffset = write * 4
+        colBuffer[colOffset] = view.getUint8(base + 24) / 255
+        colBuffer[colOffset + 1] = view.getUint8(base + 25) / 255
+        colBuffer[colOffset + 2] = view.getUint8(base + 26) / 255
+        colBuffer[colOffset + 3] = Math.max(0.04, view.getUint8(base + 27) / 255)
+        center.add(new THREE.Vector3(px, py, pz))
+        write += 1
+      }
+
+      center.multiplyScalar(1 / Math.max(1, write))
+      geometryData = {
+        count: write,
+        pos: posBuffer.subarray(0, write * 3),
+        rot: rotBuffer.subarray(0, write * 4),
+        scale: scaleBuffer.subarray(0, write * 3),
+        col: colBuffer.subarray(0, write * 4),
+        center,
+      }
+      setStats((prev) => ({ ...prev, points: write.toLocaleString() }))
+    }
+
     function parsePLY(buffer: ArrayBuffer) {
       setLoadingText(t('loading_parsing'))
       const dec = new TextDecoder()
@@ -744,7 +814,11 @@ export default function GaussianViewer({ plyUrl, houseName, onReturn }: Props) {
       // 给 UI 一帧更新时间
       await new Promise((r) => setTimeout(r, 100))
 
-      parsePLY(rawPlyData!)
+      if (isBinarySplat(rawPlyData!)) {
+        parseSplat(rawPlyData!)
+      } else {
+        parsePLY(rawPlyData!)
+      }
       if (!geometryData) throw new Error('Parse failed')
 
       createSplatMesh(geometryData)

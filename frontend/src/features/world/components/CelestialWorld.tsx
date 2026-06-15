@@ -7,8 +7,8 @@ export default function CelestialWorld({ isNight }: { isNight: boolean }) {
 
   return (
     <group>
-      <mesh position={[0, -5.8, 0]}>
-        <sphereGeometry args={[15.5, 48, 48]} />
+      <mesh position={[0, -14.2, 0]}>
+        <sphereGeometry args={[31, 64, 64]} />
         <meshBasicMaterial color={isNight ? '#0f172a' : '#dff6ff'} transparent opacity={0.42} side={2} />
       </mesh>
 

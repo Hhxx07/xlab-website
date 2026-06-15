@@ -4,6 +4,7 @@ import type { MutableRefObject } from 'react'
 import type { MovementInput } from './utils/isoDirection'
 import WorldScene from './WorldScene'
 import type { WorldCameraMode } from './CameraRig'
+import type { WorldHotspot } from './data/hotspots'
 
 // 调试模式改成自由相机
 
@@ -20,12 +21,16 @@ export default function WorldCanvas({
   controls = emptyControls,
   preview = false,
   cameraMode = 'third',
-  teleportProgress = 0,
+  shortPulseKey = 0,
+  teleportHotspot = null,
+  teleportActive = false,
 }: {
   controls?: MutableRefObject<MovementInput>
   preview?: boolean
   cameraMode?: WorldCameraMode
-  teleportProgress?: number
+  shortPulseKey?: number
+  teleportHotspot?: WorldHotspot | null
+  teleportActive?: boolean
 }) {
   const useFreeCamera = cameraMode === 'free'
   const usePerspective = cameraMode === 'free' || cameraMode === 'third'
@@ -76,7 +81,14 @@ export default function WorldCanvas({
         />
       )}
 
-      <WorldScene controls={controls} preview={preview} cameraMode={cameraMode} teleportProgress={teleportProgress} />
+      <WorldScene
+        controls={controls}
+        preview={preview}
+        cameraMode={cameraMode}
+        shortPulseKey={shortPulseKey}
+        teleportHotspot={teleportHotspot}
+        teleportActive={teleportActive}
+      />
     </Canvas>
   )
 }

@@ -1,4 +1,5 @@
 import PixelTree from './PixelTree'
+import { decorativeTreePositions, rockPositions } from '../data/colliders'
 
 const flowerPositions: Array<[number, number, number]> = [
   [-3.8, 0, 6.7], [-2.9, 0, 6.9], [2.8, 0, 6.6], [3.7, 0, 6.9],
@@ -6,19 +7,10 @@ const flowerPositions: Array<[number, number, number]> = [
   [-1.8, 0, -7.6], [1.8, 0, -7.7], [4.2, 0, -4.2], [-4.4, 0, -4.0],
 ]
 
-const rockPositions: Array<[number, number, number]> = [
-  [-9.1, 0, 3.8], [9.0, 0, 4.1], [-8.7, 0, -3.6], [8.8, 0, -3.8],
-  [-2.2, 0, 1.2], [2.3, 0, -1.1],
-]
-
 export default function Decorations() {
   return (
     <group>
-      {[
-        [-10.2, 0, 8.4], [-9.5, 0, 6.2], [-10.4, 0, -7.7], [-7.4, 0, -8.8],
-        [10.1, 0, 8.1], [8.5, 0, 6.7], [10.5, 0, -8.0], [7.2, 0, -8.7],
-        [-4.8, 0, 9.6], [4.8, 0, 9.5], [-4.9, 0, -9.5], [4.9, 0, -9.4],
-      ].map((position, index) => (
+      {decorativeTreePositions.map((position, index) => (
         <PixelTree key={index} position={position as [number, number, number]} />
       ))}
 
