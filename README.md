@@ -1,17 +1,14 @@
 # x·blog
 
-一个响应式个人博客与极客资讯系统。首页以暖米色、藏青蓝和自然草木色为主，公开展示个人文章、分类入口和 3D 知识小镇入口；登录只在留言、创作和管理员发布等动作发生时需要。
+个人博客创作尝试：留下自己的角落。
 
 ## 当前功能
 
-- 个人博客首页：养神小狗 Hero、最新文章、探索角落、3D 小镇入口
-- 左侧悬浮岛 Sidebar：Main Page、Trending、Study、Fun、Life、Login
-- Study / Fun / Life：文章卡片网格，Fun 支持 Novels / Games / Movies tabs
-- Trending：后端接口获取 GitHub 热门仓库信息，前端以信息流卡片展示
-- Editor：管理员可访问的 Milkdown Markdown 所见即所得编辑器
-- Auth：邮箱 Magic Link 无密码登录；开发环境不发邮件，直接在后端控制台打印登录链接
-- 3D World：保留 `/world` 入口，并继续作为知识小镇模块
-- 文章封面目录：`frontend/public/assets/covers/`
+- 文章内容
+- 邮箱登录
+- 评论互动
+- 热点捕捉
+- 神秘彩蛋
 
 ## 技术栈
 
@@ -20,7 +17,6 @@
 | Frontend | React 19, TypeScript, Vite |
 | UI | Tailwind CSS, CSS variables |
 | Editor | Milkdown / Crepe |
-| 3D | three, @react-three/fiber, @react-three/drei |
 | State | Zustand |
 | Routing | React Router |
 | Backend | Go 1.25, chi |
@@ -136,8 +132,7 @@ SMTP_FROM=hello@example.com
 | `/fun` | 娱乐内容，含 Novels / Games / Movies tabs |
 | `/life` | 生活文章 |
 | `/editor` | 管理员 Markdown 编辑器 |
-| `/world` | 3D 知识小镇 |
-| `/login` | Magic Link 登录 |
+| `/login` | 登录 |
 
 ## 验证
 
@@ -160,9 +155,3 @@ Docker smoke test:
 ```bash
 docker compose up --build
 ```
-
-## 备注
-
-- 文章封面统一放在 `frontend/public/assets/covers/`。
-- Trending 接口会请求 GitHub Search API；网络不可用时后端会返回本地占位数据，保证页面能正常渲染。
-- 发布接口仍可继续扩展；当前编辑器页面已完成 UI 与 Milkdown 接入，并保留管理员权限门槛。

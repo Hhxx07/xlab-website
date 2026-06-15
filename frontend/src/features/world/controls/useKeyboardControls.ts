@@ -18,6 +18,7 @@ export function useKeyboardControls(
   onEscape?: () => void,
   onLongAction?: () => void,
   onActionProgress?: (progress: number) => void,
+  onToggleUi?: () => void,
 ) {
   const keys = useRef<Record<ControlKey, boolean>>({
     up: false,
@@ -28,6 +29,9 @@ export function useKeyboardControls(
   const actionStartedAt = useRef<number | null>(null)
   const longActionFired = useRef(false)
   const progressTimer = useRef<number | null>(null)
+  const uiStartedAt = useRef<number | null>(null)
+  const uiToggleFired = useRef(false)
+  const uiTimer = useRef<number | null>(null)
 
   useEffect(() => {
     const stopActionTimer = (fireShort: boolean) => {
@@ -39,6 +43,15 @@ export function useKeyboardControls(
       actionStartedAt.current = null
       if (fireShort && !longActionFired.current) onAction?.()
       longActionFired.current = false
+    }
+
+    const stopUiTimer = () => {
+      if (uiTimer.current !== null) {
+        window.clearInterval(uiTimer.current)
+        uiTimer.current = null
+      }
+      uiStartedAt.current = null
+      uiToggleFired.current = false
     }
 
     const setKey = (event: KeyboardEvent, pressed: boolean) => {
@@ -68,6 +81,24 @@ export function useKeyboardControls(
         }
       }
 
+      if (event.code === 'KeyU') {
+        event.preventDefault()
+        if (pressed && uiStartedAt.current === null) {
+          uiStartedAt.current = performance.now()
+          uiToggleFired.current = false
+          uiTimer.current = window.setInterval(() => {
+            if (uiStartedAt.current === null || uiToggleFired.current) return
+            if (performance.now() - uiStartedAt.current >= 3000) {
+              uiToggleFired.current = true
+              onToggleUi?.()
+            }
+          }, 50)
+        }
+        if (!pressed && uiStartedAt.current !== null) {
+          stopUiTimer()
+        }
+      }
+
       if (pressed && event.code === 'Escape') onEscape?.()
     }
 
@@ -81,8 +112,9 @@ export function useKeyboardControls(
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
       stopActionTimer(false)
+      stopUiTimer()
     }
-  }, [onAction, onActionProgress, onEscape, onLongAction])
+  }, [onAction, onActionProgress, onEscape, onLongAction, onToggleUi])
 
   return keys
 }

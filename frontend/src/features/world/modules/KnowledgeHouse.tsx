@@ -1,6 +1,6 @@
 export default function KnowledgeHouse({ position }: { position: [number, number, number] }) {
   return (
-    <group position={position}>
+    <group position={position} rotation={[0, Math.PI, 0]}>
       <mesh position={[0, 0.75, 0]} castShadow>
         <boxGeometry args={[2.2, 1.5, 1.55]} />
         <meshStandardMaterial color="#fff8dc" />

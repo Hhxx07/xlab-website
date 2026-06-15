@@ -2,7 +2,7 @@ import HouseLabel from '../components/HouseLabel'
 
 export default function GameHouse({ position }: { position: [number, number, number] }) {
   return (
-    <group position={position}>
+    <group position={position} rotation={[0, Math.PI, 0]}>
       <mesh position={[0, 0.72, 0]} castShadow>
         <boxGeometry args={[2.25, 1.35, 1.45]} />
         <meshStandardMaterial color="#8cc7ff" />
