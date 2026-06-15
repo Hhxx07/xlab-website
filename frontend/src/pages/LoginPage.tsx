@@ -1,10 +1,13 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { authApi } from '../api/client'
 
 export default function LoginPage() {
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
-  const [message, setMessage] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(
+    searchParams.get('verified') === '1' ? '邮箱验证成功。请输入邮箱，获取登录链接。' : null,
+  )
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -39,7 +42,7 @@ export default function LoginPage() {
           登录一隅
         </h1>
         <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">
-          输入邮箱后，系统会发送一个临时登录链接。本地开发环境会直接在后端控制台输出链接。
+          输入邮箱后，系统会发送一个临时登录链接。点击邮件里的链接即可完成登录。
         </p>
 
         <form onSubmit={handleSubmit} className="mt-7 space-y-4">
@@ -62,7 +65,7 @@ export default function LoginPage() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
               autoComplete="email"
-              className="mt-2 w-full rounded-2xl border border-[var(--border-soft)] bg-white px-4 py-3 text-sm outline-none transition-shadow focus:ring-4 focus:ring-[var(--green-soft)]"
+              className="form-input mt-2"
             />
           </label>
 
@@ -76,7 +79,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-5 text-center text-sm text-[var(--text-soft)]">
-          仍需要密码注册？{' '}
+          还没有账号？{' '}
           <Link to="/register" className="font-bold text-[var(--green-main)]">
             前往注册
           </Link>

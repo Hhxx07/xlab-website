@@ -7,6 +7,8 @@ type TrendingRepo = {
   url: string
   stars?: string
   stars_today?: number
+  readme?: string
+  captured_at?: string
 }
 
 const trendingFallback: TrendingRepo[] = [
@@ -38,8 +40,10 @@ async function fetchRepos(endpoint: string) {
 export default function HotPage() {
   const [trendingRepos, setTrendingRepos] = useState<TrendingRepo[]>([])
   const [hottestRepos, setHottestRepos] = useState<TrendingRepo[]>([])
+  const [historyRepos, setHistoryRepos] = useState<TrendingRepo[]>([])
   const [trendingLoading, setTrendingLoading] = useState(true)
   const [hottestLoading, setHottestLoading] = useState(true)
+  const [historyLoading, setHistoryLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
@@ -66,6 +70,17 @@ export default function HotPage() {
         if (alive) setHottestLoading(false)
       })
 
+    fetchRepos('/api/trending/github/history')
+      .then((items) => {
+        if (alive) setHistoryRepos(items)
+      })
+      .catch(() => {
+        if (alive) setHistoryRepos([])
+      })
+      .finally(() => {
+        if (alive) setHistoryLoading(false)
+      })
+
     return () => {
       alive = false
     }
@@ -82,7 +97,7 @@ export default function HotPage() {
             热门资讯
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-muted)]">
-            上方是 GitHub 今日热门项目，下方保留历史累计 star 最高的经典仓库。
+            今日 GitHub Trending 会被保存到本地数据库，仓库链接和 README 快照可以在历史区回看。
           </p>
         </div>
 
@@ -91,16 +106,25 @@ export default function HotPage() {
             <SectionHeader
               marker="Now"
               title="Trending Now"
-              description="GitHub 今日正在升温的开源项目"
+              description="GitHub 今日正在升温的开源项目。"
             />
             <RepoList repos={trendingRepos} loading={trendingLoading} showStars />
           </section>
 
           <section>
             <SectionHeader
+              marker="Archive"
+              title="Trending Archive"
+              description="已经入库的 Trending 记录，包含 README 本地快照。"
+            />
+            <RepoList repos={historyRepos} loading={historyLoading} showStars showReadme emptyText="还没有历史记录，刷新今日 Trending 后会自动入库。" />
+          </section>
+
+          <section>
+            <SectionHeader
               marker="All"
               title="The Hottest"
-              description="历史累计 star 最高的一组标志性项目"
+              description="历史累计 star 最高的一组标志性项目。"
             />
             <RepoList repos={hottestRepos} loading={hottestLoading} />
           </section>
@@ -140,10 +164,14 @@ function RepoList({
   repos,
   loading,
   showStars = false,
+  showReadme = false,
+  emptyText = '暂无数据。',
 }: {
   repos: TrendingRepo[]
   loading: boolean
   showStars?: boolean
+  showReadme?: boolean
+  emptyText?: string
 }) {
   if (loading) {
     return (
@@ -155,11 +183,19 @@ function RepoList({
     )
   }
 
+  if (!repos.length) {
+    return (
+      <div className="warm-card p-6 text-sm font-semibold text-[var(--text-muted)]">
+        {emptyText}
+      </div>
+    )
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {repos.map((item) => (
         <a
-          key={`${item.name}-${item.url}`}
+          key={`${item.name}-${item.url}-${item.captured_at ?? ''}`}
           href={item.url}
           target="_blank"
           rel="noreferrer"
@@ -182,9 +218,19 @@ function RepoList({
                   </span>
                 </div>
               </div>
+              {item.captured_at && (
+                <p className="mt-2 text-xs font-semibold text-[var(--text-soft)]">
+                  Saved at {new Date(item.captured_at).toLocaleString()}
+                </p>
+              )}
               <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">
                 {item.description || 'No description provided.'}
               </p>
+              {showReadme && item.readme && (
+                <pre className="mt-4 max-h-36 overflow-hidden rounded-2xl bg-[var(--bg-page)] p-4 text-xs leading-6 text-[var(--text-muted)]">
+                  {item.readme.slice(0, 900)}
+                </pre>
+              )}
             </div>
 
             <span className="text-sm font-bold text-[var(--green-main)]">打开仓库 →</span>

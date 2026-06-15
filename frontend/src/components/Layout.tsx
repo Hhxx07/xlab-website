@@ -1,12 +1,14 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import Navbar from './Navbar'
 
 export default function Layout() {
+  const location = useLocation()
+
   return (
     <div className="min-h-screen bg-white text-slate-950">
       <Navbar />
 
-      <main>
+      <main key={location.pathname + location.search} className="page-transition">
         <Outlet />
       </main>
 

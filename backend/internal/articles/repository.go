@@ -187,7 +187,7 @@ func (r *Repository) List(ctx context.Context, f ListFilter) ([]Article, int, er
 
 	// 搜索
 	if f.Search != "" {
-		conditions = append(conditions, fmt.Sprintf("a.title ILIKE $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("(a.title ILIKE $%d OR a.summary ILIKE $%d OR a.body ILIKE $%d)", argIdx, argIdx, argIdx))
 		args = append(args, "%"+f.Search+"%")
 		argIdx++
 	}

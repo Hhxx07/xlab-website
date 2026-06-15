@@ -43,6 +43,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		Section:  q.Get("section"),
 		Tag:      q.Get("tag"),
 		AuthorID: q.Get("author"),
+		Search:   q.Get("search"),
 		Limit:    limit,
 		Offset:   offset,
 		MyUserID: myUserID,

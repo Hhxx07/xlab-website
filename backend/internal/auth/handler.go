@@ -88,6 +88,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
+		if errors.Is(err, ErrEmailNotVerified) {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -161,8 +165,8 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 验证成功后重定向到前端 profile 页面
-	http.Redirect(w, r, h.cfg.FrontendURL+"/profile?verified=1", http.StatusFound)
+	// 验证成功后回到登录页继续使用邮箱登录链接。
+	http.Redirect(w, r, h.cfg.FrontendURL+"/login?verified=1", http.StatusFound)
 }
 
 // ---------------------------------------------------------------------------

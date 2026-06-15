@@ -71,6 +71,10 @@ body {
     animation: pageSlideIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  .page-transition {
+    animation: pageFloatIn 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
   .warm-card {
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-card);
@@ -89,6 +93,28 @@ body {
   .warm-card-hover:hover {
     transform: translateY(-6px);
     box-shadow: var(--shadow-card-hover);
+  }
+
+  .form-input {
+    width: 100%;
+    border-radius: 18px;
+    border: 1px solid var(--border-soft);
+    background: rgba(255, 255, 255, 0.78);
+    padding: 12px 14px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-main);
+    outline: none;
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      background-color 180ms ease;
+  }
+
+  .form-input:focus {
+    border-color: var(--green-main);
+    background: white;
+    box-shadow: 0 0 0 4px rgba(79, 111, 82, 0.12);
   }
 
   .milkdown-shell .milkdown {
@@ -196,5 +222,18 @@ body {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+@keyframes pageFloatIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.992);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }

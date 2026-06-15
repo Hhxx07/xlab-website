@@ -1,3 +1,4 @@
+import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
@@ -17,6 +18,7 @@ export default function Sidebar({ onNavClick }: SidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, isAuthenticated, logout } = useAuthStore()
+  const [searchQuery, setSearchQuery] = useState('')
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/'
@@ -28,17 +30,37 @@ export default function Sidebar({ onNavClick }: SidebarProps) {
     navigate('/')
   }
 
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault()
+    const q = searchQuery.trim()
+    if (!q) return
+    navigate(`/search?q=${encodeURIComponent(q)}`)
+    onNavClick?.()
+  }
+
   return (
     <aside className="flex h-full flex-col rounded-[28px] border border-white/70 bg-[rgba(255,253,248,0.86)] px-4 py-5 shadow-[0_18px_60px_rgba(52,45,32,0.10)] backdrop-blur-xl">
       <Link to="/" className="group block px-3 pb-5 pt-2" onClick={onNavClick}>
         <p className="text-3xl font-black tracking-[-0.04em] text-[var(--text-main)]">
-          x·blog
+          x路blog
         </p>
         <p className="mt-1 text-sm font-medium text-[var(--text-soft)]">
-          小地方挺舒服
+          小地方，也舒服
         </p>
         <div className="mt-5 h-px bg-gradient-to-r from-transparent via-[var(--border-soft)] to-transparent" />
       </Link>
+
+      <form onSubmit={handleSearch} className="mb-4 px-1">
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--border-soft)] bg-white/72 px-3 py-2 shadow-sm">
+          <SearchIcon />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="搜索文章"
+            className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--text-main)] outline-none placeholder:text-[var(--text-soft)]"
+          />
+        </div>
+      </form>
 
       <nav className="flex-1 space-y-2 px-1">
         {NAV_ITEMS.map(({ label, subLabel, path, icon: Icon }) => {
@@ -75,6 +97,7 @@ export default function Sidebar({ onNavClick }: SidebarProps) {
             </Link>
           )
         })}
+
         {isAuthenticated && user?.role === 'admin' && (
           <Link
             to="/admin"
@@ -106,15 +129,19 @@ export default function Sidebar({ onNavClick }: SidebarProps) {
       <div className="mt-5 rounded-[20px] border border-[var(--border-soft)] bg-white/70 p-4">
         {isAuthenticated && user ? (
           <div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brown-soft)] text-sm font-bold text-[var(--brown-main)]">
+            <Link
+              to="/profile"
+              onClick={onNavClick}
+              className="flex items-center gap-3 rounded-2xl p-1 transition hover:bg-[var(--bg-page)]"
+            >
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[var(--brown-soft)] text-sm font-bold text-[var(--brown-main)]">
                 {user.username.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-[var(--text-main)]">{user.username}</p>
-                <p className="text-xs text-[var(--text-soft)]">阅读记录已同步</p>
+                <p className="text-xs text-[var(--text-soft)]">进入个人资料</p>
               </div>
-            </div>
+            </Link>
             <button
               onClick={handleLogout}
               className="mt-4 w-full rounded-full bg-[var(--bg-page)] px-4 py-2 text-sm font-semibold text-slate-500 transition-colors hover:bg-[var(--brown-soft)] hover:text-[var(--brown-main)]"
@@ -124,9 +151,9 @@ export default function Sidebar({ onNavClick }: SidebarProps) {
           </div>
         ) : (
           <div>
-            <p className="text-sm font-bold text-[var(--text-main)]">Welcome！</p>
+            <p className="text-sm font-bold text-[var(--text-main)]">Welcome</p>
             <p className="mt-1 text-xs leading-5 text-[var(--text-soft)]">
-              来留下点痕迹吧
+              登录后可以写文章和回复评论。
             </p>
             <Link
               to="/login"
@@ -190,7 +217,16 @@ function AdminIcon() {
   return (
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06A2 2 0 1 1 22.62 6.8l-.06.06A1.65 1.65 0 0 0 22.23 8.68a1.65 1.65 0 0 0 1.51 1H24a2 2 0 0 1 0 4h-.26a1.65 1.65 0 0 0-1.51 1Z" />
+    </svg>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg className="h-4 w-4 flex-shrink-0 text-[var(--text-soft)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
     </svg>
   )
 }

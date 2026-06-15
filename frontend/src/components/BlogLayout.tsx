@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 
 export default function BlogLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const location = useLocation()
 
   const closeSidebar = () => setSidebarOpen(false)
 
@@ -40,7 +41,7 @@ export default function BlogLayout() {
       </button>
 
       <main className="flex-1 overflow-y-auto">
-        <div className="page-slide-in min-h-full">
+        <div key={location.pathname + location.search} className="page-transition min-h-full">
           <Outlet />
         </div>
       </main>

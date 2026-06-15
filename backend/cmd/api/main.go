@@ -8,11 +8,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -20,6 +22,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/xlab-backend/internal/admin"
 	"github.com/xlab-backend/internal/articles"
@@ -157,7 +160,8 @@ func main() {
 
 	// --- Trending ---
 	r.Get("/api/trending/github", githubTrendingHandler)
-	r.Get("/api/trending/github/scrape", githubTrendingScrapeHandler)
+	r.Get("/api/trending/github/scrape", githubTrendingScrapeHandler(dbPool))
+	r.Get("/api/trending/github/history", githubTrendingHistoryHandler(dbPool))
 
 	// --- Admin (auth + admin role required) ---
 	r.Group(func(r chi.Router) {
@@ -200,6 +204,202 @@ func main() {
 		log.Error().Err(err).Msg("HTTP server shutdown failed")
 	}
 	log.Info().Msg("server stopped")
+}
+
+type persistedTrendingRepo struct {
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Language    string    `json:"language"`
+	URL         string    `json:"url"`
+	Stars       string    `json:"stars"`
+	StarsToday  *int      `json:"stars_today,omitempty"`
+	Readme      string    `json:"readme,omitempty"`
+	CapturedAt  time.Time `json:"captured_at,omitempty"`
+}
+
+func githubTrendingScrapeHandler(db *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
+		defer cancel()
+
+		items := scrapeGitHubTrending(ctx)
+		if len(items) == 0 {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"items": []map[string]string{{
+					"name":        "github/trending",
+					"description": "Trending 抓取暂时不可用。",
+					"language":    "Go",
+					"url":         "https://github.com/trending",
+					"stars":       "",
+				}},
+			})
+			return
+		}
+
+		capturedAt := time.Now()
+		_ = saveTrendingRun(ctx, db, items, capturedAt)
+		for i := range items {
+			items[i].CapturedAt = capturedAt
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"items": items})
+	}
+}
+
+func githubTrendingHistoryHandler(db *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		rows, err := db.Query(ctx,
+			`SELECT full_name, description, language, url, stars, stars_today, readme, captured_at
+			 FROM github_trending_repos
+			 ORDER BY captured_at DESC
+			 LIMIT 50`,
+		)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{"items": []persistedTrendingRepo{}})
+			return
+		}
+		defer rows.Close()
+
+		items := []persistedTrendingRepo{}
+		for rows.Next() {
+			var item persistedTrendingRepo
+			if err := rows.Scan(&item.Name, &item.Description, &item.Language, &item.URL, &item.Stars, &item.StarsToday, &item.Readme, &item.CapturedAt); err == nil {
+				items = append(items, item)
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"items": items})
+	}
+}
+
+func scrapeGitHubTrending(ctx context.Context) []persistedTrendingRepo {
+	items := []persistedTrendingRepo{}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://github.com/trending?since=daily", nil)
+	if err != nil {
+		return items
+	}
+	req.Header.Set("User-Agent", "xlab-trending/1.0")
+	req.Header.Set("Accept", "text/html")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil || resp.Body == nil {
+		return items
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	pageHTML := string(body)
+	cardRe := regexp.MustCompile(`(?s)<article[^>]*Box-row[^>]*>(.*?)</article>`)
+	nameRe := regexp.MustCompile(`(?s)<h2[^>]*>.*?<a[^>]*href="/([^"]+)"`)
+	descRe := regexp.MustCompile(`(?s)<p[^>]*col-9[^>]*>(.*?)</p>`)
+	langRe := regexp.MustCompile(`(?s)<span[^>]*itemprop="programmingLanguage"[^>]*>(.*?)</span>`)
+	starsRe := regexp.MustCompile(`(?s)<span[^>]*d-inline-block float-sm-right[^>]*>(.*?)</span>`)
+	tagRe := regexp.MustCompile(`<[^>]+>`)
+	spaceRe := regexp.MustCompile(`\s+`)
+	digitRe := regexp.MustCompile(`\d+`)
+
+	clean := func(value string) string {
+		value = tagRe.ReplaceAllString(value, " ")
+		value = html.UnescapeString(value)
+		return strings.TrimSpace(spaceRe.ReplaceAllString(value, " "))
+	}
+
+	for _, match := range cardRe.FindAllStringSubmatch(pageHTML, 10) {
+		card := match[1]
+		nameMatch := nameRe.FindStringSubmatch(card)
+		if len(nameMatch) < 2 {
+			continue
+		}
+		name := clean(strings.Trim(nameMatch[1], "/"))
+		item := persistedTrendingRepo{
+			Name:     name,
+			Language: "Unknown",
+			URL:      "https://github.com/" + name,
+		}
+		if desc := descRe.FindStringSubmatch(card); len(desc) > 1 {
+			item.Description = clean(desc[1])
+		}
+		if lang := langRe.FindStringSubmatch(card); len(lang) > 1 {
+			item.Language = clean(lang[1])
+		}
+		if stars := starsRe.FindStringSubmatch(card); len(stars) > 1 {
+			item.Stars = clean(stars[1])
+			if digits := digitRe.FindString(item.Stars); digits != "" {
+				if n, err := strconv.Atoi(digits); err == nil {
+					item.StarsToday = &n
+				}
+			}
+		}
+		items = append(items, item)
+	}
+
+	return items
+}
+
+func saveTrendingRun(ctx context.Context, db *pgxpool.Pool, items []persistedTrendingRepo, capturedAt time.Time) error {
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var runID string
+	if err := tx.QueryRow(ctx,
+		`INSERT INTO github_trending_runs (source, captured_at)
+		 VALUES ('github_trending', $1)
+		 RETURNING id`,
+		capturedAt,
+	).Scan(&runID); err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		readme := fetchGitHubReadme(ctx, item.Name)
+		if len(readme) > 30000 {
+			readme = readme[:30000]
+		}
+		_, err := tx.Exec(ctx,
+			`INSERT INTO github_trending_repos
+			 (run_id, full_name, description, language, url, stars, stars_today, readme, captured_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			runID, item.Name, item.Description, item.Language, item.URL, item.Stars, item.StarsToday, readme, capturedAt,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit(ctx)
+}
+
+func fetchGitHubReadme(ctx context.Context, fullName string) string {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/repos/"+fullName+"/readme", nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("Accept", "application/vnd.github.raw")
+	req.Header.Set("User-Agent", "xlab-trending/1.0")
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil || resp.Body == nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return ""
+	}
+	body, _ := io.ReadAll(resp.Body)
+	return string(body)
 }
 
 // ===========================================================================
@@ -272,7 +472,7 @@ func githubTrendingHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"items": items})
 }
 
-func githubTrendingScrapeHandler(w http.ResponseWriter, r *http.Request) {
+func legacyGithubTrendingScrapeHandler(w http.ResponseWriter, r *http.Request) {
 	type repo struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`

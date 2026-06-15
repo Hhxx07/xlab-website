@@ -7,6 +7,7 @@ import HotPage from './pages/blog/HotPage'
 import StudyPage from './pages/blog/StudyPage'
 import FunPage from './pages/blog/FunPage'
 import LifePage from './pages/blog/LifePage'
+import SearchPage from './pages/blog/SearchPage'
 import ArticleDetailPage from './pages/blog/ArticleDetailPage'
 import EditorPage from './pages/blog/EditorPage'
 import AdminPage from './pages/AdminPage'
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="study" element={<StudyPage />} />
         <Route path="fun" element={<FunPage />} />
         <Route path="life" element={<LifePage />} />
+        <Route path="search" element={<SearchPage />} />
         <Route path="editor" element={<EditorPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="post/*" element={<ArticleDetailPage />} />
