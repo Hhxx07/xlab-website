@@ -115,11 +115,9 @@ export default function ProfilePage() {
         <section className="mt-8">
           <div className="mb-4 flex items-center gap-4">
             <h2 className="text-xl font-bold text-[var(--text-main)]">📝 我的文章</h2>
-            {user.role === 'admin' && (
-              <Link to="/editor" className="rounded-full bg-[var(--green-main)] px-4 py-1.5 text-xs font-bold text-white hover:bg-[var(--green-deep)]">
-                + 写文章
-              </Link>
-            )}
+            <Link to="/editor" className="rounded-full bg-[var(--green-main)] px-4 py-1.5 text-xs font-bold text-white hover:bg-[var(--green-deep)]">
+              + 写文章
+            </Link>
           </div>
 
           <div className="mb-4 flex gap-6 text-sm text-slate-500">

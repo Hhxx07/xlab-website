@@ -33,6 +33,9 @@ export const articlesApi = {
   getBySlug: (slug: string) =>
     request<{ article: Article }>(`/articles/${encodeURIComponent(slug)}`),
 
+  getForEdit: (id: string) =>
+    request<{ article: Article }>(`/articles/by-id/${encodeURIComponent(id)}`),
+
   create: (data: {
     title: string; body: string; summary: string; cover?: string
     tag_ids: string[]; published: boolean
@@ -42,7 +45,10 @@ export const articlesApi = {
       body: JSON.stringify(data),
     }),
 
-  update: (id: string, data: Record<string, unknown>) =>
+  update: (id: string, data: {
+    title?: string; body?: string; summary?: string; cover?: string
+    tag_ids?: string[]; published?: boolean
+  }) =>
     request<{ article: Article }>(`/articles/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),

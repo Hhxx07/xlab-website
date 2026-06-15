@@ -99,6 +99,21 @@ func (s *Service) GetBySlug(ctx context.Context, slug, myUserID string) (*Articl
 	return a, nil
 }
 
+// GetByIDForEdit returns the full article body for an authenticated editor.
+func (s *Service) GetByIDForEdit(ctx context.Context, userID, role, articleID string) (*Article, error) {
+	a, err := s.repo.GetByID(ctx, articleID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if role != "admin" && a.UserID != userID {
+		return nil, ErrForbidden
+	}
+	return a, nil
+}
+
 // List 文章列表
 func (s *Service) List(ctx context.Context, f ListFilter) ([]Article, int, error) {
 	if f.Published == nil {
@@ -257,9 +272,9 @@ func (s *Service) ListTags(ctx context.Context) ([]Tag, error) {
 
 // Sections 获取分区 + 标签映射
 type SectionInfo struct {
-	Name   string `json:"name"`
-	Label  string `json:"label"`
-	Tags   []Tag  `json:"tags"`
+	Name  string `json:"name"`
+	Label string `json:"label"`
+	Tags  []Tag  `json:"tags"`
 }
 
 func (s *Service) Sections(ctx context.Context) ([]SectionInfo, error) {

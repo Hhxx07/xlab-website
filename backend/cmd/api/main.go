@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
+	"strings"
 	"syscall"
 	"time"
 
@@ -131,6 +133,7 @@ func main() {
 
 	r.Group(func(r chi.Router) {
 		r.Use(authMiddleware.RequireAuth)
+		r.Get("/api/articles/by-id/{id}", articlesHandler.GetByIDForEdit)
 		r.Post("/api/articles", articlesHandler.Create)
 		r.Patch("/api/articles/{id}", articlesHandler.Update)
 		r.Delete("/api/articles/{id}", articlesHandler.Delete)
@@ -270,6 +273,74 @@ func githubTrendingHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func githubTrendingScrapeHandler(w http.ResponseWriter, r *http.Request) {
+	type repo struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Language    string `json:"language"`
+		URL         string `json:"url"`
+		Stars       string `json:"stars"`
+	}
+
+	items := []repo{}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://github.com/trending?since=daily", nil)
+	if err == nil {
+		req.Header.Set("User-Agent", "xlab-trending/1.0")
+		req.Header.Set("Accept", "text/html")
+		if resp, err := http.DefaultClient.Do(req); err == nil && resp.Body != nil {
+			defer resp.Body.Close()
+			body, _ := io.ReadAll(resp.Body)
+			html := string(body)
+			cardRe := regexp.MustCompile(`(?s)<article[^>]*Box-row[^>]*>(.*?)</article>`)
+			nameRe := regexp.MustCompile(`(?s)<h2[^>]*>.*?<a[^>]*href="/([^"]+)"`)
+			descRe := regexp.MustCompile(`(?s)<p[^>]*col-9[^>]*>(.*?)</p>`)
+			langRe := regexp.MustCompile(`(?s)<span[^>]*itemprop="programmingLanguage"[^>]*>(.*?)</span>`)
+			starsRe := regexp.MustCompile(`(?s)<span[^>]*d-inline-block float-sm-right[^>]*>(.*?)</span>`)
+			tagRe := regexp.MustCompile(`<[^>]+>`)
+			spaceRe := regexp.MustCompile(`\s+`)
+
+			clean := func(value string) string {
+				value = tagRe.ReplaceAllString(value, " ")
+				value = strings.ReplaceAll(value, "&amp;", "&")
+				value = strings.ReplaceAll(value, "&#39;", "'")
+				value = strings.ReplaceAll(value, "&quot;", `"`)
+				return strings.TrimSpace(spaceRe.ReplaceAllString(value, " "))
+			}
+
+			for _, match := range cardRe.FindAllStringSubmatch(html, 10) {
+				card := match[1]
+				nameMatch := nameRe.FindStringSubmatch(card)
+				if len(nameMatch) < 2 {
+					continue
+				}
+				name := clean(strings.Trim(nameMatch[1], "/"))
+				item := repo{
+					Name:     name,
+					Language: "Unknown",
+					URL:      "https://github.com/" + name,
+				}
+				if desc := descRe.FindStringSubmatch(card); len(desc) > 1 {
+					item.Description = clean(desc[1])
+				}
+				if lang := langRe.FindStringSubmatch(card); len(lang) > 1 {
+					item.Language = clean(lang[1])
+				}
+				if stars := starsRe.FindStringSubmatch(card); len(stars) > 1 {
+					item.Stars = clean(stars[1])
+				}
+				items = append(items, item)
+			}
+		}
+	}
+
+	if len(items) > 0 {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"items": items})
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"items": []map[string]string{{

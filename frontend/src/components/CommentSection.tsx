@@ -135,7 +135,10 @@ function CommentItem({
   const initials = displayName.charAt(0).toUpperCase()
 
   return (
-    <div style={{ marginLeft: depth > 0 ? Math.min(depth * 24, 72) : 0 }}>
+    <div
+      className={depth > 0 ? 'border-l border-[var(--border-soft)] pl-4' : ''}
+      style={{ marginLeft: depth > 0 ? Math.min(depth * 18, 54) : 0 }}
+    >
       <div className="rounded-xl border border-[var(--border-soft)] bg-white p-4">
         <div className="flex items-start gap-3">
           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--green-soft)] text-xs font-bold text-[var(--green-main)]">

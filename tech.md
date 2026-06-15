@@ -320,3 +320,608 @@ XLab 是一个前后端分离的网页应用，前端使用 React + Vite 构建 
 4. 再执行 `000001_init_users.down.sql`
 
 这样可以保证数据库结构始终满足外键依赖关系，也能安全地撤销最近一次迁移。
+
+---
+
+## 七、3D 小镇与高斯世界的完整实现方式
+
+本项目的 3D 部分分成两个层级：
+
+1. `3D 小镇`：使用 `@react-three/fiber`、`@react-three/drei` 和 Three.js 基础几何体搭建的低多边形/像素风导航场景。
+2. `高斯世界`：使用原生 Three.js 解析 `.ply` Gaussian Splatting 数据，并通过自定义 Shader 把每个高斯点渲染成可缩放、可透明混合、可扰动的面片。
+
+小镇负责导航、模块入口和笔记交互；高斯世界负责进入某个房屋后的沉浸式 3D 展示。两者通过 React Router 串起来：小镇靠近房屋热点后按 `E`，跳转到 `/world/gaussian/:houseId`，高斯页再加载 `/gaussian/{houseId}/scene.ply`。
+
+### 7.1 3D 小镇的入口结构
+
+小镇页面入口是：
+
+- `frontend/src/pages/WorldPage.tsx`
+- `frontend/src/features/world/WorldCanvas.tsx`
+- `frontend/src/features/world/WorldScene.tsx`
+
+`WorldPage.tsx` 负责普通 React UI 层：
+
+- 固定全屏容器：`fixed inset-0 overflow-hidden`
+- 挂载 `<WorldCanvas />`
+- 显示左上角标题、右上角返回按钮、左下角控制提示
+- 显示 `InteractionPrompt`
+- 显示 `NoteModal`
+- 监听键盘交互：`E` 触发当前热点，`Esc` 关闭弹窗或返回首页
+
+`WorldCanvas.tsx` 是 Three.js Canvas 层：
+
+- 使用 `Canvas` 创建 WebGL 上下文。
+- `dpr={1}` 限制像素比，降低 GPU 压力。
+- `gl.antialias=true` 开启抗锯齿。
+- 默认使用 `OrthographicCamera` 营造等距小镇视角。
+- 调试模式 `FREE_CAMERA` 下切换成 `PerspectiveCamera + OrbitControls`，方便开发时自由检查模型位置。
+
+默认相机配置：
+
+```tsx
+<OrthographicCamera
+  makeDefault
+  position={[8, 8, 8]}
+  zoom={preview ? 38 : 48}
+  near={0.1}
+  far={100}
+  onUpdate={(self) => self.lookAt(0, 0, 0)}
+/>
+```
+
+这个相机位置让世界从斜上方看下来，`x/y/z` 三轴都能被看见，因此基础盒子几何体会呈现接近像素小镇的等距风格。
+
+### 7.2 小镇场景图如何组装
+
+`WorldScene.tsx` 是真正的 3D 场景组织者。它把世界拆成多个小组件：
+
+- `Ground`：地面和中心广场。
+- `Road`：十字道路和地砖。
+- `Sky`：背景色、半球光、方向光、像素云。
+- `NewsBoard`：村口新闻板。
+- `PixelTree`：树木。
+- `Player`：玩家角色。
+- `CameraRig`：跟随玩家的相机控制。
+- `KnowledgeHouse` / `GameHouse` / `LifeHouse` / `MovieHouse` / `NovelHouse` / `SportHouse`：各主题房屋。
+
+场景里最重要的组织方式是 `worldModules` 数据驱动：
+
+```ts
+export const worldModules: WorldModule[] = [
+  {
+    id: 'knowledge',
+    name: '知识',
+    position: [-5.8, 0, 3.6],
+    route: '/notes/knowledge/math',
+    type: 'house',
+  },
+  ...
+]
+```
+
+`WorldScene.tsx` 维护一个组件映射：
+
+```ts
+const moduleComponents = {
+  knowledge: KnowledgeHouse,
+  game: GameHouse,
+  life: LifeHouse,
+  movie: MovieHouse,
+  novel: NovelHouse,
+  sport: SportHouse,
+}
+```
+
+渲染时遍历 `worldModules`，按 `module.id` 找到对应房屋组件，再把 `module.position` 传进去。这样房屋的位置和业务模块配置在数据层，房屋的几何造型留在组件层。
+
+### 7.3 像素风小镇是怎么用几何体拼出来的
+
+当前小镇不是导入 glTF/FBX 模型，而是直接用 Three.js 基础几何体手工搭建：
+
+- 地面：`planeGeometry args={[24, 24]}`。
+- 中心广场：`ringGeometry args={[1.6, 2.15, 4]}`，四边形环形看起来更像像素风广场。
+- 道路：`boxGeometry args={[1, 0.05, 1]}`，通过 `scale` 拉成长条，形成十字路。
+- 地砖：多个小 `boxGeometry` 排列在道路两侧。
+- 树：树干和树冠都是盒子，两个绿色盒子错位堆叠。
+- 新闻板：两根木柱、一个公告板、一个顶部横梁。
+- 玩家：身体、头、脚、头发都由盒子组成。
+- 房屋：主体、屋顶、门窗、装饰物由 box/cone 等基础几何体组合。
+
+例如 `KnowledgeHouse`：
+
+- 房屋主体：`boxGeometry [2.2, 1.5, 1.55]`
+- 屋顶：`boxGeometry [2.45, 0.25, 1.75]`
+- 门：`boxGeometry [0.52, 0.9, 0.08]`
+- 窗：`boxGeometry [0.45, 0.36, 0.06]`
+- 铅笔装饰：倾斜的细长 box + 四棱锥 cone
+
+这种做法的优点是：
+
+- 不依赖外部模型资源。
+- 所有对象可用 React 组件表达，改颜色、位置、尺寸很快。
+- 像素风和低多边形风格天然适合 box/cone/plane 组合。
+- 资产体积小，加载快。
+
+缺点是复杂造型需要写较多 mesh，因此项目把每类物体拆成独立组件，避免 `WorldScene` 变成巨型文件。
+
+### 7.4 小镇输入系统
+
+键盘输入在 `useKeyboardControls.ts` 中统一处理。
+
+支持：
+
+- `W` / `ArrowUp`：上
+- `S` / `ArrowDown`：下
+- `A` / `ArrowLeft`：左
+- `D` / `ArrowRight`：右
+- `E`：交互
+- `Esc`：关闭弹窗或返回
+
+这个 hook 返回的是一个 ref：
+
+```ts
+const keys = useRef({
+  up: false,
+  down: false,
+  left: false,
+  right: false,
+})
+```
+
+使用 ref 的原因是：玩家移动在 `useFrame` 每帧读取输入。如果用 React state，每次按键都会触发组件重新渲染；用 ref 可以让渲染循环直接读最新输入，不引入不必要的 React 更新。
+
+### 7.5 等距方向转换
+
+小镇相机是斜 45 度俯视，屏幕方向和世界坐标方向不是一一对应的。因此移动输入需要经过 `getIsoMovement` 转换。
+
+实现位置：
+
+- `frontend/src/features/world/utils/isoDirection.ts`
+
+核心逻辑：
+
+```ts
+const x = screenX + screenY
+const z = screenY - screenX
+const length = Math.hypot(x, z) || 1
+return { x: x / length, z: z / length }
+```
+
+这一步把屏幕上的上下左右转换成世界平面上的 `x/z` 方向。最后做归一化，保证斜向移动不会比单方向移动更快。
+
+### 7.6 玩家移动和边界限制
+
+玩家组件在：
+
+- `frontend/src/features/world/Player.tsx`
+
+每帧执行：
+
+1. 从 `controls.current` 读取当前按键。
+2. 调用 `getIsoMovement` 得到世界方向。
+3. 按 `speed * delta` 推进位置。
+4. 调用 `clampTownPosition` 把玩家限制在小镇范围内。
+5. 把位置写入 Zustand 全局状态。
+6. 用 `group.current.position.lerp(...)` 平滑靠近目标位置。
+7. 有移动时根据方向更新 `rotation.y`，让角色朝向移动方向。
+
+边界限制在 `distance.ts`：
+
+```ts
+export function clampTownPosition(position) {
+  return [
+    Math.max(-10, Math.min(10, position[0])),
+    position[1],
+    Math.max(-10, Math.min(10, position[2])),
+  ]
+}
+```
+
+也就是说小镇活动范围是 `x: -10..10`、`z: -10..10`。
+
+### 7.7 相机跟随系统
+
+相机跟随在：
+
+- `frontend/src/features/world/CameraRig.tsx`
+
+它通过 `useThree()` 拿到当前默认相机，再在 `useFrame` 中读取 Zustand 的 `playerPosition`。
+
+每帧逻辑：
+
+```ts
+target.set(playerPosition[0], 0.2, playerPosition[2])
+desired.copy(target).add(offset) // offset = [8, 8, 8]
+camera.position.lerp(desired, 0.08)
+camera.lookAt(target)
+camera.updateProjectionMatrix()
+```
+
+这让相机始终在玩家斜上方 `[8, 8, 8]` 的位置追随，且用 `lerp` 做缓动，避免玩家一动相机就硬切。
+
+### 7.8 热点系统与交互
+
+热点数据在：
+
+- `frontend/src/features/world/data/hotspots.ts`
+
+热点类型有三种：
+
+- `open_note`：打开笔记弹窗。
+- `open_news`：打开新闻板。
+- `enter_house`：进入某个主题房屋的高斯世界。
+
+每个热点包含：
+
+```ts
+{
+  id: 'knowledge-door',
+  module: 'knowledge',
+  position: [-5.8, 0, 4.95],
+  radius: 1.35,
+  type: 'enter_house',
+  noteSlug: 'knowledge/math',
+  interactionText: '按 E 进入知识小屋',
+}
+```
+
+`WorldScene.tsx` 每帧执行热点检测：
+
+1. 从 Zustand 读取玩家位置。
+2. 遍历 `hotspots`。
+3. 用 `distance2D` 计算玩家和热点在 `x/z` 平面上的距离。
+4. 如果距离小于热点半径，记录最近热点。
+5. 最近热点变化时写入 `activeHotspot`。
+
+UI 层的 `InteractionPrompt` 订阅 `activeHotspot`，有热点时在屏幕底部显示 `interactionText`。
+
+按下 `E` 时，`WorldPage.handleAction` 根据热点类型执行：
+
+- `open_news`：打开新闻弹窗。
+- `open_note`：打开笔记弹窗。
+- `enter_house`：跳转到 `/world/gaussian/{module}`。
+
+进入高斯世界时会把当前玩家位置放进 router state：
+
+```ts
+navigate(`/world/gaussian/${activeHotspot.module}`, {
+  state: { returnPosition: pos },
+})
+```
+
+这样从高斯世界返回小镇时，玩家不会回到出生点，而是回到进入房屋前的位置。
+
+### 7.9 小镇状态管理
+
+小镇的全局状态在：
+
+- `frontend/src/features/world/store/worldStore.ts`
+
+使用 Zustand 保存：
+
+- `playerPosition`
+- `currentScene`
+- `activeHotspot`
+- `activeNoteSlug`
+- `isNoteModalOpen`
+- `isNewsModalOpen`
+- `movementEnabled`
+- `visitedModules`
+
+这里没有把所有 3D 对象状态都放进 Zustand，只保存跨组件需要共享的业务状态。比如玩家 mesh 的平滑位置、旋转等临时渲染状态留在 `Player.tsx` 的 ref 中；而热点、弹窗、当前玩家位置这种会影响 UI 和路由的状态才进入 store。
+
+### 7.10 高斯世界页面如何进入
+
+高斯世界页面入口是：
+
+- `frontend/src/pages/GaussianPage.tsx`
+- `frontend/src/features/world/gaussian/GaussianViewer.tsx`
+
+路由参数 `houseId` 决定加载哪个高斯模型：
+
+```ts
+const { houseId } = useParams()
+const plyUrl = `/gaussian/${houseId}/scene.ply`
+```
+
+例如进入知识小屋：
+
+```text
+/world/gaussian/knowledge
+```
+
+对应资源：
+
+```text
+public/gaussian/knowledge/scene.ply
+```
+
+`GaussianPage` 只负责：
+
+- 从路由拿 `houseId`
+- 从 `worldModules` 找房屋名
+- 拼出 `.ply` 地址
+- 把返回函数传给 `GaussianViewer`
+
+真正的高斯渲染全部在 `GaussianViewer.tsx`。
+
+### 7.11 高斯世界为什么没有用 R3F
+
+小镇使用 R3F，因为它是大量 React 组件化 mesh 的组合，适合声明式写法。
+
+高斯世界使用原生 Three.js，原因是它需要：
+
+- 手动解析二进制 `.ply`
+- 创建 `InstancedBufferGeometry`
+- 自定义 shader attribute 和 uniform
+- 控制每帧 physics、shader time、turbulence
+- 直接管理 renderer、scene、camera 生命周期
+- 更细粒度地控制 WebGL 性能
+
+这类逻辑如果强行写成 R3F 组件，会把 shader、buffer、加载状态和相机控制拆得很碎。当前实现集中在一个 viewer 中，便于理解数据从 PLY 到 GPU 的完整链路。
+
+### 7.12 GaussianViewer 的整体生命周期
+
+`GaussianViewer.tsx` 的生命周期由一个 `useEffect([plyUrl])` 管理：
+
+1. 初始化 Three.js：`scene`、`camera`、`renderer`、grid。
+2. 绑定输入事件：键盘、鼠标、resize。
+3. 启动 LoadingGameSystem。
+4. 下载 `.ply` 文件。
+5. 解析 PLY 为 typed arrays。
+6. 创建 Gaussian Splat mesh。
+7. 自动对焦相机。
+8. 启动 requestAnimationFrame 渲染循环。
+9. 组件卸载时释放 renderer、geometry、material、事件监听和动画帧。
+
+这是典型的 Three.js imperative lifecycle：初始化、加载、渲染、清理都由代码显式控制。
+
+### 7.13 PLY 数据解析
+
+PLY 解析函数是 `parsePLY(buffer: ArrayBuffer)`。
+
+它做了几件事：
+
+1. 读取文件头部，找到 `end_header`。
+2. 解析 `element vertex` 得到点数量。
+3. 解析每个 `property`，记录属性在每个 vertex 结构中的 offset。
+4. 用 `DataView` 按 little-endian 读取二进制数据。
+5. 把有效点写入 typed arrays：
+   - `posBuffer: Float32Array(vertexCount * 3)`
+   - `rotBuffer: Float32Array(vertexCount * 4)`
+   - `scaleBuffer: Float32Array(vertexCount * 3)`
+   - `colBuffer: Float32Array(vertexCount * 4)`
+
+当前代码识别的关键字段：
+
+- `x/y/z`：高斯中心位置。
+- `opacity`：不透明度，经过 sigmoid 转换。
+- `f_dc_0/1/2`：球谐直流颜色项，使用 `SH_C0` 转换为 RGB。
+- `rot_0..rot_3`：旋转四元数。
+- `scale_0..scale_2`：高斯尺度，使用 `Math.exp` 还原。
+
+透明度过滤：
+
+```ts
+const minOpacity = 0.05
+if (opacity < minOpacity) continue
+```
+
+这样可以跳过几乎不可见的点，减少实例数量。
+
+### 7.14 从 PLY 到 GPU：InstancedBufferGeometry
+
+解析完成后会生成：
+
+```ts
+geometryData = {
+  count,
+  pos,
+  rot,
+  scale,
+  col,
+}
+```
+
+然后 `createSplatMesh(data)` 创建一个基础平面：
+
+```ts
+const baseGeo = new THREE.PlaneGeometry(1, 1)
+const geo = new THREE.InstancedBufferGeometry()
+geo.index = baseGeo.index
+geo.attributes.position = baseGeo.attributes.position
+geo.attributes.uv = baseGeo.attributes.uv
+```
+
+每个高斯点不是一个独立 mesh，而是一个平面实例。每个实例有自己的属性：
+
+```ts
+geo.setAttribute('instPosition', new THREE.InstancedBufferAttribute(data.pos, 3))
+geo.setAttribute('instRotation', new THREE.InstancedBufferAttribute(data.rot, 4))
+geo.setAttribute('instScale', new THREE.InstancedBufferAttribute(data.scale, 3))
+geo.setAttribute('instColor', new THREE.InstancedBufferAttribute(data.col, 4))
+```
+
+这就是高斯世界能渲染大量点的关键：CPU 只创建一个 mesh，GPU 通过 instancing 一次绘制大量 splat。
+
+### 7.15 高斯点的 Shader 渲染
+
+材质是 `THREE.ShaderMaterial`，包括自定义 vertex shader 和 fragment shader。
+
+主要 uniforms：
+
+- `uSplatScale`：整体缩放。
+- `uOpacityMod`：整体透明度调节。
+- `uBrightness`：亮度。
+- `uTime`：动画时间。
+- `uTurbulence`：扰动强度。
+- `uFlowAmp`：流动幅度。
+- `uFlowFreq`：流动频率。
+- `uFlowSpeed`：流动速度。
+
+vertex shader 做的事：
+
+1. 读取当前实例的 `instPosition`、`instRotation`、`instScale`、`instColor`。
+2. 把基础平面顶点按高斯 scale 放大。
+3. 用四元数转旋转矩阵，旋转平面。
+4. 如果开启湍流，把点中心按 curl noise 风格函数偏移。
+5. 计算最终裁剪空间位置。
+
+fragment shader 做的事：
+
+1. 用 `uv` 把方形平面映射到 `[-1, 1]`。
+2. 超出单位圆的像素直接 `discard`。
+3. 使用 `exp(-r^2 * 2.0)` 生成中心浓、边缘淡的高斯透明度。
+4. 颜色乘亮度，alpha 乘实例透明度和整体透明度。
+
+核心片段：
+
+```glsl
+vec2 c = vUv * 2.0 - 1.0;
+if (dot(c, c) > 1.0) discard;
+float a = exp(-dot(c, c) * 2.0) * vColor.a * uOpacityMod;
+if (a < 0.05) discard;
+gl_FragColor = vec4(vColor.rgb * uBrightness, a);
+```
+
+所以每个实例虽然几何上是一个平面，但视觉上会变成一个柔和的椭圆/圆形高斯点。
+
+### 7.16 高斯世界的飞行相机
+
+高斯世界不是 OrbitControls，而是自定义第一人称飞行控制。
+
+状态保存在 `physics` 对象里：
+
+- `velocity`
+- `inputVector`
+- `move: { f, b, l, r, u, d }`
+- `boost`
+- `mouseDown`
+- `targetRot`
+- `currRot`
+
+键盘：
+
+- `W/S/A/D`：前后左右飞行。
+- `Space`：上升。
+- `ShiftLeft`：下降。
+- `Q`：加速。
+- `H`：隐藏/显示 UI。
+- `Esc`：返回小镇。
+
+鼠标：
+
+- 按住左键拖动，修改 `targetRot.x/y`。
+- 每帧让 `currRot` 平滑追向 `targetRot`。
+
+每帧物理更新：
+
+1. 根据当前相机四元数计算 forward/right/up。
+2. 根据输入组合出移动方向。
+3. 加速度推进 `velocity`。
+4. 指数阻尼模拟摩擦。
+5. 限制最大速度。
+6. `camera.position.addScaledVector(velocity, dt)`。
+
+这样得到的是类似飞行观察器的体验，而不是围绕模型旋转。
+
+### 7.17 高斯世界的自动对焦
+
+模型加载后会执行 `autoFocusCamera()`。
+
+它抽样前若干个点，估算模型半径，然后把相机放到合适距离：
+
+```ts
+camera.position.set(0, 0, radius * 3)
+camera.lookAt(0, 0, 0)
+```
+
+同时同步 `physics.targetRot` 和 `physics.currRot`，避免相机位置变了但鼠标控制的内部旋转状态还停留在旧值。
+
+### 7.18 流体/散开效果
+
+高斯世界有一个 turbulence 按钮。点击后切换：
+
+```ts
+turbulence: s.turbulence > 0.5 ? 0.0 : 1.0
+```
+
+渲染循环里 `currentTurbulence` 不会瞬间跳变，而是缓慢追向目标值：
+
+```ts
+currentTurbulence += (target - currentTurbulence) * lerpSpeed
+```
+
+shader 内部根据 `uTime`、`uFlowAmp`、`uFlowFreq`、`uFlowSpeed` 计算 curl 风格偏移，让每个高斯点像被流场吹散一样运动。关掉后，点又回到原位置。
+
+### 7.19 LoadingGameSystem
+
+高斯 PLY 可能较大，所以 viewer 内置了一个加载小游戏系统：
+
+- 使用一个独立 `<canvas>` 绘制加载层。
+- 玩家三角形由键盘输入驱动。
+- 随机生成目标点。
+- 碰到目标点时产生粒子并刷新目标。
+- 同时显示下载进度条、加载文案和 quote。
+
+这个系统和主 Three.js 场景是分离的：加载层是 2D Canvas，模型加载完成后调用 `loadingSys.stop()`，再显示真正的高斯世界。
+
+### 7.20 UI 与渲染层分离
+
+`GaussianViewer` 的 UI 是 React DOM：
+
+- 顶部标题和副标题。
+- 点数/FPS 状态。
+- 底部控制按钮。
+- 导航提示。
+- 加载遮罩。
+
+Three.js 只负责渲染 `renderer.domElement`。React 负责 HUD。两者通过 `bridgeRef` 连接：
+
+```ts
+const bridgeRef = useRef({
+  splatMesh: null,
+  state: sliders,
+  updateUniforms: () => {},
+  autoFocusCamera: () => {},
+  downloadModel: () => {},
+})
+```
+
+当 React slider/state 变化时，写入 `bridgeRef.current.state`，然后调用 `updateUniforms()` 把 UI 状态同步到 shader uniforms。
+
+这种做法避免把 Three.js 对象放进 React state，因为 Three.js 对象频繁变化，用 state 会导致不必要的 React re-render。
+
+### 7.21 小镇与高斯世界的整体数据流
+
+完整链路如下：
+
+1. 用户进入 `/world`。
+2. `WorldPage` 渲染 `WorldCanvas`。
+3. `WorldCanvas` 创建 R3F Canvas 和相机。
+4. `WorldScene` 渲染小镇：地面、道路、房屋、树、玩家。
+5. `useKeyboardControls` 记录按键。
+6. `Player` 每帧根据按键更新位置。
+7. `WorldScene` 每帧根据位置检测热点。
+8. UI 显示当前热点提示。
+9. 用户按 `E`。
+10. 如果是笔记/新闻热点，打开 DOM 弹窗。
+11. 如果是房屋热点，跳转 `/world/gaussian/:houseId`。
+12. `GaussianPage` 根据 `houseId` 拼出 `.ply` 地址。
+13. `GaussianViewer` 下载并解析 PLY。
+14. PLY 数据进入 `InstancedBufferGeometry`。
+15. Shader 把每个实例渲染成高斯 splat。
+16. 用户在高斯世界中飞行查看。
+17. 按 `Esc` 或返回按钮回到 `/world`，恢复进入前的小镇位置。
+
+### 7.22 为什么这样拆分
+
+这个 3D 架构的核心取舍是：
+
+- 小镇是交互导航空间，强调可维护、组件化、数据驱动，所以用 R3F。
+- 高斯世界是高性能点云/splat 渲染空间，强调 buffer、shader、相机和资源生命周期控制，所以用原生 Three.js。
+- UI 仍然交给 React DOM，不把所有东西都塞进 WebGL。
+- 跨组件业务状态用 Zustand，逐帧渲染状态用 ref 和 Three.js 对象。
+
+这让项目同时保留了 React 的可维护性和 Three.js 的底层控制能力。

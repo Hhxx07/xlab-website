@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { renderMarkdown } from '../../content/notes/markdown'
+import MilkdownMarkdown from '../../components/MilkdownMarkdown'
 import { articlesApi } from '../../api/articles'
 import { MODULE_BADGE_COLORS, MODULE_LABELS } from '../../lib/blogUtils'
 import { useAuthStore } from '../../store/authStore'
@@ -10,7 +10,7 @@ import type { Article } from '../../types'
 export default function ArticleDetailPage() {
   const params = useParams()
   const navigate = useNavigate()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const slug = params['*'] || ''
 
   const [article, setArticle] = useState<Article | null>(null)
@@ -80,6 +80,7 @@ export default function ArticleDetailPage() {
   const module = tagToModule[tagName] || 'knowledge'
   const badgeColor = MODULE_BADGE_COLORS[module] ?? 'bg-slate-50 text-slate-600'
   const label = MODULE_LABELS[module] ?? tagName
+  const canEdit = isAuthenticated && (user?.role === 'admin' || user?.id === article.user_id)
 
   return (
     <article>
@@ -132,12 +133,20 @@ export default function ArticleDetailPage() {
           >
             {liked ? '❤️' : '🤍'} {likeCount}
           </button>
+          {canEdit && (
+            <Link
+              to={`/editor?edit=${article.id}`}
+              className="inline-flex items-center rounded-full bg-slate-100 px-5 py-2.5 text-sm font-bold text-slate-600 transition-all hover:bg-[var(--green-soft)] hover:text-[var(--green-main)]"
+            >
+              编辑
+            </Link>
+          )}
         </div>
 
         <hr className="my-8 border-slate-200" />
 
-        <div className="article-prose space-y-6 text-slate-700">
-          {renderMarkdown(article.body)}
+        <div className="article-prose text-slate-700">
+          <MilkdownMarkdown markdown={article.body} />
         </div>
 
         <div className="mt-12 border-t border-slate-200 pt-8">

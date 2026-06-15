@@ -13,16 +13,16 @@ import (
 
 // Comment 评论模型
 type Comment struct {
-	ID         string     `json:"id"`
-	ArticleID  string     `json:"article_id"`
-	UserID     string     `json:"user_id"`
-	ParentID   *string    `json:"parent_id"`
-	Body       string     `json:"body"`
-	LikeCount  int        `json:"like_count"`
-	CreatedAt  time.Time  `json:"created_at"`
-	LikedByMe  bool       `json:"liked_by_me"`
-	User       *CommentUser `json:"user"`
-	Replies    []Comment  `json:"replies,omitempty"`
+	ID        string       `json:"id"`
+	ArticleID string       `json:"article_id"`
+	UserID    string       `json:"user_id"`
+	ParentID  *string      `json:"parent_id"`
+	Body      string       `json:"body"`
+	LikeCount int          `json:"like_count"`
+	CreatedAt time.Time    `json:"created_at"`
+	LikedByMe bool         `json:"liked_by_me"`
+	User      *CommentUser `json:"user"`
+	Replies   []Comment    `json:"replies,omitempty"`
 }
 
 // CommentUser 评论用户简况
@@ -167,27 +167,41 @@ func (r *Repository) ToggleLike(ctx context.Context, userID, commentID string) (
 // 辅助：扁平列表 → 树形结构
 // ---------------------------------------------------------------------------
 func buildTree(flat []Comment) []Comment {
-	byID := map[string]*Comment{}
-	roots := []Comment{}
+	byID := map[string]int{}
+	childrenByParent := map[string][]int{}
+	rootIndexes := []int{}
 
 	for i := range flat {
-		c := flat[i]
-		c.Replies = []Comment{}
-		byID[c.ID] = &c
+		flat[i].Replies = []Comment{}
+		byID[flat[i].ID] = i
 	}
 
 	for i := range flat {
-		c := byID[flat[i].ID]
-		if c.ParentID != nil {
-			parent, ok := byID[*c.ParentID]
-			if ok {
-				parent.Replies = append(parent.Replies, *c)
-			} else {
-				roots = append(roots, *c)
-			}
-		} else {
-			roots = append(roots, *c)
+		if flat[i].ParentID == nil {
+			rootIndexes = append(rootIndexes, i)
+			continue
 		}
+		parentID := *flat[i].ParentID
+		if _, ok := byID[parentID]; !ok {
+			rootIndexes = append(rootIndexes, i)
+			continue
+		}
+		childrenByParent[parentID] = append(childrenByParent[parentID], i)
+	}
+
+	var build func(index int) Comment
+	build = func(index int) Comment {
+		c := flat[index]
+		c.Replies = []Comment{}
+		for _, childIndex := range childrenByParent[c.ID] {
+			c.Replies = append(c.Replies, build(childIndex))
+		}
+		return c
+	}
+
+	roots := []Comment{}
+	for _, index := range rootIndexes {
+		roots = append(roots, build(index))
 	}
 
 	return roots

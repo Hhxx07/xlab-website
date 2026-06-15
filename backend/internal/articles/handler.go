@@ -40,11 +40,11 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	f := ListFilter{
-		Section: q.Get("section"),
-		Tag:     q.Get("tag"),
+		Section:  q.Get("section"),
+		Tag:      q.Get("tag"),
 		AuthorID: q.Get("author"),
-		Limit:   limit,
-		Offset:  offset,
+		Limit:    limit,
+		Offset:   offset,
 		MyUserID: myUserID,
 	}
 
@@ -82,6 +82,34 @@ func (h *Handler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if err == ErrNotFound {
 			writeError(w, http.StatusNotFound, "文章不存在")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "获取文章失败")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{"article": a})
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/articles/by-id/{id}（需认证，作者或 admin，用于编辑）
+// ---------------------------------------------------------------------------
+func (h *Handler) GetByIDForEdit(w http.ResponseWriter, r *http.Request) {
+	user := auth.GetUserFromContext(r.Context())
+	if user == nil {
+		writeError(w, http.StatusUnauthorized, "请先登录")
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	a, err := h.svc.GetByIDForEdit(r.Context(), user.ID, user.Role, id)
+	if err != nil {
+		if err == ErrNotFound {
+			writeError(w, http.StatusNotFound, "文章不存在")
+			return
+		}
+		if err == ErrForbidden {
+			writeError(w, http.StatusForbidden, "没有权限编辑此文章")
 			return
 		}
 		writeError(w, http.StatusInternalServerError, "获取文章失败")
