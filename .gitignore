@@ -45,3 +45,5 @@ docker-compose.override.yml
 # 数据库
 *.db
 *.sqlite
+
+*.ply
