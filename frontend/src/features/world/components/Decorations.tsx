@@ -34,19 +34,10 @@ export default function Decorations() {
         </mesh>
       ))}
 
-      <mesh position={[0, 0.07, -2.6]} receiveShadow>
+      <mesh position={[0, 0.07, 2.15]} receiveShadow>
         <boxGeometry args={[2.4, 0.14, 0.7]} />
-        <meshStandardMaterial color="#b77947" />
+        <meshStandardMaterial color="#81510b" />
       </mesh>
-      <mesh position={[-0.92, 0.45, -2.6]} castShadow>
-        <boxGeometry args={[0.16, 0.76, 0.16]} />
-        <meshStandardMaterial color="#7a4a28" />
-      </mesh>
-      <mesh position={[0.92, 0.45, -2.6]} castShadow>
-        <boxGeometry args={[0.16, 0.76, 0.16]} />
-        <meshStandardMaterial color="#7a4a28" />
-      </mesh>
-
       <group position={[-1.45, 0, 4.92]}>
         <mesh position={[0, 0.42, 0]} castShadow>
           <boxGeometry args={[0.14, 0.84, 0.14]} />
