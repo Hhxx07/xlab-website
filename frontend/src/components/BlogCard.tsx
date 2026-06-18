@@ -6,8 +6,7 @@ interface BlogCardProps {
   note: NoteDocument
   meta?: string
 }
-
-export default function BlogCard({ note, meta = '2026.06 · 6 min read' }: BlogCardProps) {
+export default function BlogCard({ note, meta = 'Notes' }: BlogCardProps) {
   const badgeColor = MODULE_BADGE_COLORS[note.module] ?? 'bg-slate-100 text-slate-600'
   const label = MODULE_LABELS[note.module] ?? note.module
   const accent = MODULE_ACCENT_COLORS[note.module] ?? '#9ca3af'
@@ -42,3 +41,4 @@ export default function BlogCard({ note, meta = '2026.06 · 6 min read' }: BlogC
     </Link>
   )
 }
+

@@ -174,6 +174,25 @@ XLab 是一个前后端分离的网页应用，前端使用 React + Vite 构建 
 - 数据库存储哈希而非原始令牌 — 即使数据库泄露，攻击者也无法伪造会话
 - 会话包含 IP 和 User-Agent 记录，可检测异常使用
 
+### 4.1 邮箱验证系统
+
+**作用：** 新用户注册后先完成邮箱验证，再允许使用邮箱密码登录；同时也支持重新发送验证邮件。
+
+**实现方式：**
+- 注册时，`backend/internal/auth/service.go` 先创建用户，再调用 `sendVerificationEmail()` 生成一次性验证令牌
+- 令牌使用随机字节生成，原始 token 只出现在邮件链接里，数据库里只保存它的 SHA-256 哈希
+- 哈希后的令牌写入 `email_verification_tokens` 表，设置 24 小时过期时间，过期后自动失效
+- 验证链接指向 `GET /api/auth/verify-email?token=...`，`handler.go` 取出 token 后交给 Service 校验
+- 校验成功后，Repository 会把 `users.email_verified_at` 设为当前时间，并删除已使用的验证令牌
+- 登录接口会检查 `email_verified_at`，未验证的账号会被拦下，前端登录页也会显示“邮箱验证成功”后的引导文案
+- 如果生产环境配置了 SMTP，系统会真正发邮件；如果是开发环境，则直接把验证链接打印到控制台，方便本地调试
+- `/api/auth/resend-verification` 允许已登录用户重新发送验证邮件
+
+**和 Magic Link 的区别：**
+- 邮箱验证是“注册后确认邮箱归属”的流程
+- Magic Link 是“输入邮箱后直接获取临时登录链接”的登录方式
+- 两者共用“随机 token + 过期时间”的思路，但数据存储和用途不同
+
 ### 5. zerolog — 结构化日志
 
 **作用：** 输出可解析的 JSON 日志，便于生产环境日志聚合和搜索。
@@ -198,6 +217,17 @@ XLab 是一个前后端分离的网页应用，前端使用 React + Vite 构建 
 - `markdown.tsx` 中的手写解析器将 Markdown 转换为 React JSX 渲染，支持标题、段落、无序列表
 - 首页展示最新笔记列表，点击进入 `NotePage` 全页阅读
 - 在 3D 世界中，走到特定位置按 E 键可打开笔记模态框，模态框中也有链接跳转到完整页面
+
+### Markdown 文章字数统计
+
+**作用：** 在文章详情页展示正文的字数，作为内容长度和阅读规模的基础统计。
+
+**实现方式：**
+- 字数字段存储在 `articles.word_count`，数据库迁移里直接把这一列设计成 `INT NOT NULL DEFAULT 0`
+- 创建/更新文章时，`backend/internal/articles/service.go` 用 `utf8.RuneCountInString(strings.TrimSpace(body))` 计算字数，避免把首尾空白算进去
+- Service 把算好的 `WordCount` 传给 Repository，`repository.go` 在 `INSERT` / `UPDATE` 时写入数据库
+- 前端详情页直接读取 `article.word_count` 并展示为 “X 字”，不再在浏览器端重复计算
+- 这样字数的来源只有一处，保证列表、详情、编辑后的统计口径一致
 
 ---
 

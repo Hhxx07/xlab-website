@@ -10,29 +10,29 @@ import siteIntro from '../../content/siteIntro.md?raw'
 
 const exploreCards = [
   {
-    title: '学习',
-    desc: '课程笔记、数学、物理、计算机',
+    title: 'STUDY',
+    desc: '课程、数学、物理、cs',
     path: '/study',
     icon: 'M5 19.5A2.5 2.5 0 0 1 7.5 17H20M5 4.5A2.5 2.5 0 0 1 7.5 2H20v20H7.5A2.5 2.5 0 0 1 5 19.5zM9 7h7M9 11h5',
     bg: 'var(--blue-soft)',
   },
   {
-    title: '项目',
-    desc: '硬件、网站、3D 打印、FPGA',
+    title: 'PROJECT',
+    desc: '硬件、网站、3D 打印',
     path: '/study',
     icon: 'M4 7h16M7 7v13m10-13v13M6 4h12a2 2 0 0 1 2 2v1H4V6a2 2 0 0 1 2-2Zm2 7h8M8 15h5',
     bg: 'var(--purple-soft)',
   },
   {
-    title: '有趣',
-    desc: '游戏、电影、小说和一些脑洞',
+    title: 'FUN',
+    desc: '游戏、电影、小说',
     path: '/fun',
     icon: 'M4 8h16v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V8Zm4 4h3m-1.5-1.5v3M15 12h.01M18 14h.01',
     bg: 'var(--orange-soft)',
   },
   {
-    title: '生活',
-    desc: '训练、日常和碎片记录',
+    title: 'LIFE',
+    desc: '日常',
     path: '/life',
     icon: 'M12 21s7-4.5 7-11a4 4 0 0 0-7-2.65A4 4 0 0 0 5 10c0 6.5 7 11 7 11Z',
     bg: 'var(--green-soft)',
@@ -244,7 +244,7 @@ function HeroSection() {
             一隅
           </h1>
           <p className="mt-6 max-w-[520px] text-lg leading-[1.8] text-white/88">
-            学习、生活和项目慢慢长出来的地方。
+            一个角落。
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <a
@@ -293,7 +293,7 @@ function IntroNoteSection() {
           Intro Note
         </p>
         <h2 className="mt-3 text-3xl font-black tracking-[-0.03em] text-[var(--text-main)] sm:text-4xl">
-          网站说明
+          About Here
         </h2>
         <div className="milkdown-render mt-6">
           <MilkdownMarkdown markdown={siteIntro} />
@@ -357,10 +357,10 @@ function ExploreSection() {
     <section>
       <div className="mb-8">
         <h2 className="text-3xl font-black tracking-[-0.03em] text-[var(--text-main)]">
-          探索角落
+          More
         </h2>
         <p className="mt-2 text-sm font-medium text-[var(--text-muted)]">
-          不同内容的入口
+          不同的入口
         </p>
       </div>
 

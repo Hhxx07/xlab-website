@@ -10,6 +10,7 @@ vendor/
 dist/
 build/
 tmp/
+db/
 
 # Go
 *.exe
@@ -47,3 +48,4 @@ docker-compose.override.yml
 *.sqlite
 
 *.ply
+*.splat

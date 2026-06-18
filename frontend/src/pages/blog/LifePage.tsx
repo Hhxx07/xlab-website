@@ -20,7 +20,7 @@ export default function LifePage() {
     <ArticleGridPage
       eyebrow="Life"
       title="生活"
-      description="训练、日常、碎片记录，以及让生活重新有秩序的小方法。"
+      description="Any other things"
       emptyText="暂无生活记录"
       articles={articles}
       loading={loading}

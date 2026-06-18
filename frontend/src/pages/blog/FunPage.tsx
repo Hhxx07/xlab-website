@@ -40,7 +40,7 @@ export default function FunPage() {
             有趣
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-muted)]">
-            游戏、电影、小说和一些奇怪但有意思的想法。
+            游戏、电影、小说
           </p>
         </div>
 

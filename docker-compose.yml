@@ -9,7 +9,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres18_data:/var/lib/postgresql
+      - ./db:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d app"]
       interval: 5s
@@ -95,5 +95,5 @@ services:
     command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 volumes:
-  postgres18_data:
+#   postgres18_data:
   frontend_node_modules:

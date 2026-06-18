@@ -21,7 +21,7 @@ export default function StudyPage() {
     <ArticleGridPage
       eyebrow="Study"
       title="学习"
-      description="课程笔记、数学、物理、计算机与工程实践。"
+      description="课程笔记、数学、物理、计算机"
       emptyText="暂无学习笔记"
       articles={articles}
       loading={loading}

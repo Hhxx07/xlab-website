@@ -61,7 +61,7 @@ export default function ArticleDetailPage() {
         <div className="max-w-md rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <h1 className="text-2xl font-semibold text-slate-800">笔记未找到</h1>
           <p className="mt-3 text-sm leading-6 text-slate-500">
-            这篇文章还没有创建，或链接已失效。
+            Not Found
           </p>
           <button
             onClick={() => navigate(-1)}
@@ -101,7 +101,7 @@ export default function ArticleDetailPage() {
           返回
         </button>
 
-        <span className={`mt-6 inline-block rounded-full px-3 py-1 text-xs font-medium ${badgeColor}`}>
+        <span className={`mt-6 inline-block relative -top-1 -right-3 rounded-full px-3 py-1 text-xs font-medium ${badgeColor}`}>
           {label}
         </span>
 

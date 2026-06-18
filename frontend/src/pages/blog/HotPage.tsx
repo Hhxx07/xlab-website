@@ -118,26 +118,26 @@ export default function HotPage() {
             Trending
           </p>
           <h1 className="mt-2 text-4xl font-black tracking-[-0.04em] text-[var(--text-main)]">
-            热门资讯
+            HOT
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-muted)]">
-            今日 GitHub Trending 会保存到本地数据库；同一天同一个仓库不会重复归档。
+             实时获取 GitHub Trending ＆ 留档
           </p>
         </div>
 
         <div className="space-y-12">
           <section>
-            <SectionHeader marker="Now" title="Trending Now" description="GitHub 今日正在升温的开源项目。" />
+            <SectionHeader marker="Now" title="Trending Now" description="康康潮流 （readme抓取正在开发中...）" />
             <RepoList repos={trendingRepos} loading={trendingLoading} showStars onReadme={openReadme} />
           </section>
 
           <section>
-            <SectionHeader marker="Archive" title="Trending Archive" description="按照归档日期分栏显示，README 为本地快照。" />
+            <SectionHeader marker="Archive" title="Trending Archive" description="归档日期分类" />
             <ArchiveGroups repos={historyRepos} loading={historyLoading} onReadme={openReadme} />
           </section>
 
           <section>
-            <SectionHeader marker="All" title="The Hottest" description="历史累计 star 最高的一组标志性项目。" />
+            <SectionHeader marker="All" title="The Hottest" description="Legendaries" />
             <RepoList repos={hottestRepos} loading={hottestLoading} onReadme={openReadme} />
           </section>
         </div>
