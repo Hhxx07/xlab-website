@@ -32,6 +32,16 @@ type User struct {
 	UpdatedAt       time.Time
 }
 
+type PendingRegistration struct {
+	ID           string
+	Email        string
+	Username     string
+	PasswordHash string
+	TokenHash    string
+	ExpiresAt    time.Time
+	CreatedAt    time.Time
+}
+
 // Session 会话模型
 type Session struct {
 	ID        string
@@ -65,6 +75,26 @@ func (r *Repository) CreateUser(ctx context.Context, email *string, username str
 	err := r.pool.QueryRow(ctx,
 		`INSERT INTO users (id, email, username, password_hash)
 		 VALUES (gen_random_uuid(), $1, $2, $3)
+		 RETURNING id, email, username, display_name, avatar_url, bio, role,
+		           password_hash, email_verified_at, created_at, updated_at`,
+		email, username, passwordHash,
+	).Scan(
+		&user.ID, &user.Email, &user.Username, &user.DisplayName,
+		&user.AvatarURL, &user.Bio, &user.Role,
+		&user.PasswordHash, &user.EmailVerifiedAt,
+		&user.CreatedAt, &user.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (r *Repository) CreateVerifiedUser(ctx context.Context, email string, username string, passwordHash string) (*User, error) {
+	user := &User{}
+	err := r.pool.QueryRow(ctx,
+		`INSERT INTO users (id, email, username, password_hash, email_verified_at)
+		 VALUES (gen_random_uuid(), $1, $2, $3, NOW())
 		 RETURNING id, email, username, display_name, avatar_url, bio, role,
 		           password_hash, email_verified_at, created_at, updated_at`,
 		email, username, passwordHash,
@@ -148,6 +178,62 @@ func (r *Repository) UpdateUserEmailVerified(ctx context.Context, userID string)
 		 WHERE id = $1`,
 		userID,
 	)
+	return err
+}
+
+func (r *Repository) CreatePendingRegistration(ctx context.Context, email, username, passwordHash, tokenHash string, expiresAt time.Time) error {
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO pending_registrations (id, email, username, password_hash, token_hash, expires_at)
+		 VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)`,
+		email, username, passwordHash, tokenHash, expiresAt,
+	)
+	return err
+}
+
+func (r *Repository) GetPendingRegistrationByEmail(ctx context.Context, email string) (*PendingRegistration, error) {
+	p := &PendingRegistration{}
+	err := r.pool.QueryRow(ctx,
+		`SELECT id, email, username, password_hash, token_hash, expires_at, created_at
+		 FROM pending_registrations
+		 WHERE email = $1 AND expires_at > NOW()`,
+		email,
+	).Scan(&p.ID, &p.Email, &p.Username, &p.PasswordHash, &p.TokenHash, &p.ExpiresAt, &p.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+func (r *Repository) GetPendingRegistrationByUsername(ctx context.Context, username string) (*PendingRegistration, error) {
+	p := &PendingRegistration{}
+	err := r.pool.QueryRow(ctx,
+		`SELECT id, email, username, password_hash, token_hash, expires_at, created_at
+		 FROM pending_registrations
+		 WHERE username = $1 AND expires_at > NOW()`,
+		username,
+	).Scan(&p.ID, &p.Email, &p.Username, &p.PasswordHash, &p.TokenHash, &p.ExpiresAt, &p.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+func (r *Repository) GetPendingRegistrationByTokenHash(ctx context.Context, tokenHash string) (*PendingRegistration, error) {
+	p := &PendingRegistration{}
+	err := r.pool.QueryRow(ctx,
+		`SELECT id, email, username, password_hash, token_hash, expires_at, created_at
+		 FROM pending_registrations
+		 WHERE token_hash = $1 AND expires_at > NOW()`,
+		tokenHash,
+	).Scan(&p.ID, &p.Email, &p.Username, &p.PasswordHash, &p.TokenHash, &p.ExpiresAt, &p.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+func (r *Repository) DeletePendingRegistration(ctx context.Context, id string) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM pending_registrations WHERE id = $1`, id)
 	return err
 }
 

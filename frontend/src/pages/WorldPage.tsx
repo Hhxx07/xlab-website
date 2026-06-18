@@ -11,6 +11,7 @@ import { useWorldStore } from '../features/world/store/worldStore'
 export default function WorldPage() {
   const navigate = useNavigate()
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const openContentTimer = useRef<number | null>(null)
   const activeHotspot = useWorldStore((state) => state.activeHotspot)
   const activeNoteSlug = useWorldStore((state) => state.activeNoteSlug)
   const isNoteModalOpen = useWorldStore((state) => state.isNoteModalOpen)
@@ -36,13 +37,18 @@ export default function WorldPage() {
     if (!activeHotspot) return
 
     triggerShortPulse()
-    if (activeHotspot.type === 'open_news') {
-      openNews()
-      return
-    }
-    if (activeHotspot.type !== 'toggle_night' && activeHotspot.noteSlug) {
-      openNote(activeHotspot.noteSlug)
-    }
+    const hotspot = activeHotspot
+    if (openContentTimer.current !== null) window.clearTimeout(openContentTimer.current)
+    openContentTimer.current = window.setTimeout(() => {
+      openContentTimer.current = null
+      if (hotspot.type === 'open_news') {
+        openNews()
+        return
+      }
+      if (hotspot.type !== 'toggle_night' && hotspot.noteSlug) {
+        openNote(hotspot.noteSlug)
+      }
+    }, 360)
   }, [activeHotspot, isNewsModalOpen, isNoteModalOpen, openNews, openNote, triggerShortPulse])
 
   const handleLongAction = useCallback(() => {
@@ -85,6 +91,7 @@ export default function WorldPage() {
     audioRef.current.loop = true
     audioRef.current.volume = 0.42
     return () => {
+      if (openContentTimer.current !== null) window.clearTimeout(openContentTimer.current)
       audioRef.current?.pause()
       audioRef.current = null
     }

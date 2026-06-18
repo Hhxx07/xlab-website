@@ -13,7 +13,11 @@ export default function NewsBoard() {
         <boxGeometry args={[1.55, 0.9, 0.16]} />
         <meshStandardMaterial color="#f8e7b8" />
       </mesh>
-      <mesh position={[0, 1.58, 0]}>
+      <mesh position={[0, 0.56, 0.01]}>
+        <boxGeometry args={[1.72, 0.18, 0.22]} />
+        <meshStandardMaterial color="#d78d3f" />
+      </mesh>
+      <mesh position={[0, 1.5, 0.01]}>
         <boxGeometry args={[1.75, 0.22, 0.22]} />
         <meshStandardMaterial color="#d78d3f" />
       </mesh>

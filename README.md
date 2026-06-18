@@ -108,19 +108,40 @@ npm run dev
 
 ## 环境变量
 
-Docker Compose 已提供开发默认值。生产环境发送 Magic Link 邮件时需要配置：
+项目通过 `docker-compose.yml` + `.env` 文件管理配置。`docker-compose.yml` 中所有变量都有开发默认值，开箱即用。
 
-```text
-APP_ENV=production
-FRONTEND_URL=https://your-domain.com
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=your-user
-SMTP_PASSWORD=your-password
-SMTP_FROM=hello@example.com
+### 配置邮箱发送（必须）
+
+复制模板并填入真实的 SMTP 信息：
+
+```bash
+cp .env.example .env
 ```
 
-开发环境保持 `APP_ENV=development` 时不会发送邮件，只会在后端控制台输出登录链接。
+编辑 `.env` 文件，至少修改以下变量：
+
+```env
+# 生产环境切换
+APP_ENV=production
+
+# 你的域名（邮件中的验证链接会用这个地址）
+FRONTEND_URL=https://你的域名.com
+
+# SMTP 邮件配置（以 QQ 邮箱为例）
+SMTP_HOST=smtp.qq.com
+SMTP_PORT=587
+SMTP_USER=你的QQ号@qq.com
+SMTP_PASSWORD=你的授权码          # 不是 QQ 密码！需要在 QQ 邮箱设置中开启 SMTP 并获取授权码
+SMTP_FROM=你的QQ号@qq.com
+```
+
+`.env` 文件已在 `.gitignore` 中忽略，不会被提交到 git。
+
+### 开发模式
+
+不需要创建 `.env`，直接 `docker compose up -d` 即可。此时：
+- `APP_ENV` 默认为 `development`
+- SMTP 邮件不会真实发送，验证链接会打印在后端控制台（以 `[EMAIL VERIFY DEV]` 开头）
 
 ## 常用路由
 

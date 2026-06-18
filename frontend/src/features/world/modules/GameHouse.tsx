@@ -1,5 +1,3 @@
-import HouseLabel from '../components/HouseLabel'
-
 export default function GameHouse({ position }: { position: [number, number, number] }) {
   return (
     <group position={position} rotation={[0, Math.PI, 0]}>
@@ -33,7 +31,7 @@ export default function GameHouse({ position }: { position: [number, number, num
           <meshStandardMaterial color={index === 0 ? '#333333' : '#ffdc6a'} />
         </mesh>
       ))}
-      <HouseLabel position={[0, 2.35, 0]} label="游戏" />
+      {/* <HouseLabel position={[0, 2.35, 0]} label="游戏" /> */}
     </group>
   )
 }

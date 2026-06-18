@@ -1,9 +1,8 @@
 ---
-title: 电影片单
+title: 电影
 module: movie
-summary: 观影短评、推荐片单和影像观察。
+summary: something related
 ---
 
-# 电影片单
-
-这里会放电影列表、短评和主题化推荐。第一版使用抽象海报和像素影厅作为视觉入口。
+阿嬤的情书值得看。
+爱在三部曲也是。

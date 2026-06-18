@@ -5,11 +5,15 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
+	"net"
 	"net/http"
 	"net/smtp"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -59,7 +63,8 @@ type RegisterInput struct {
 }
 
 type RegisterResult struct {
-	User *User `json:"user"`
+	User    *User  `json:"user,omitempty"`
+	Message string `json:"message"`
 }
 
 func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterResult, error) {
@@ -92,24 +97,83 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterR
 		return nil, ErrUsernameAlreadyExists
 	}
 
+	pendingByEmail, err := s.repo.GetPendingRegistrationByEmail(ctx, input.Email)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("查询待验证邮箱失败: %w", err)
+	}
+	if pendingByEmail != nil {
+		return nil, fmt.Errorf("该邮箱已经提交注册，请先点击邮件中的验证链接")
+	}
+
+	pendingByUsername, err := s.repo.GetPendingRegistrationByUsername(ctx, input.Username)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("查询待验证用户名失败: %w", err)
+	}
+	if pendingByUsername != nil {
+		return nil, fmt.Errorf("该用户名正在等待邮箱验证，请稍后再试")
+	}
+
 	passwordHash, err := hashPassword(input.Password)
 	if err != nil {
 		return nil, fmt.Errorf("密码加密失败: %w", err)
 	}
 
-	email := input.Email
-	username := input.Username
-	hash := passwordHash
-	user, err := s.repo.CreateUser(ctx, &email, username, &hash)
+	if err := s.sendPendingRegistrationEmail(ctx, input.Email, input.Username, passwordHash); err != nil {
+		return nil, err
+	}
+
+	return &RegisterResult{Message: "验证邮件已发送，请点击邮件链接完成注册。"}, nil
+}
+
+func (s *Service) sendPendingRegistrationEmail(ctx context.Context, email, username, passwordHash string) error {
+	rawToken, tokenHash, err := generateSessionToken()
 	if err != nil {
-		return nil, fmt.Errorf("创建用户失败: %w", err)
+		return err
 	}
 
-	if err := s.sendVerificationEmail(ctx, user.ID, input.Email); err != nil {
-		return nil, fmt.Errorf("发送验证邮件失败: %w", err)
+	expiresAt := time.Now().Add(24 * time.Hour)
+	if err := s.repo.CreatePendingRegistration(ctx, email, username, passwordHash, tokenHash, expiresAt); err != nil {
+		return err
 	}
 
-	return &RegisterResult{User: user}, nil
+	frontend := strings.TrimRight(s.cfg.FrontendURL, "/")
+	verifyURL := fmt.Sprintf("%s/api/auth/verify-email?token=%s", frontend, rawToken)
+	loginURL := fmt.Sprintf("%s/login?verified=1", frontend)
+
+	// 始终打印验证链接到控制台（开发 & 生产都打印，方便 SMTP 故障时降级使用）
+	fmt.Fprintf(os.Stderr, "\n[VERIFY EMAIL] 验证链接: %s\n[VERIFY EMAIL] 验证后登录: %s\n\n", verifyURL, loginURL)
+
+	if s.smtpConfigured() {
+		from := s.cfg.SMTPFrom
+		if from == "" {
+			from = s.cfg.SMTPUser
+		}
+		message := strings.Join([]string{
+			fmt.Sprintf("From: %s", from),
+			fmt.Sprintf("To: %s", email),
+			"Subject: 验证你的 XLab 邮箱",
+			"MIME-Version: 1.0",
+			"Content-Type: text/plain; charset=UTF-8",
+			"",
+			"欢迎注册 XLab。",
+			"请点击下面的链接完成邮箱验证，链接 24 小时内有效：",
+			verifyURL,
+			"",
+			"验证成功后可从这里登录：",
+			loginURL,
+		}, "\r\n")
+
+		if err := s.sendSMTPMail(from, []string{email}, []byte(message)); err != nil {
+			// SMTP 发送失败不阻塞注册 — 记录错误并降级到控制台链接
+			log.Printf("[SMTP ERROR] 邮件发送失败 to=%s host=%s port=%d: %v", email, s.cfg.SMTPHost, s.cfg.SMTPPort, err)
+			log.Printf("[SMTP ERROR] 请检查 SMTP 配置：邮箱是否开启 SMTP 服务？授权码是否正确？端口是否正确？")
+			return nil
+		}
+
+		log.Printf("[SMTP OK] 验证邮件已发送至 %s", email)
+	}
+
+	return nil
 }
 
 func (s *Service) sendVerificationEmail(ctx context.Context, userID, email string) error {
@@ -127,13 +191,13 @@ func (s *Service) sendVerificationEmail(ctx context.Context, userID, email strin
 	verifyURL := fmt.Sprintf("%s/api/auth/verify-email?token=%s", frontend, rawToken)
 	loginURL := fmt.Sprintf("%s/login?verified=1", frontend)
 
-	if s.cfg.SMTPHost != "" && s.cfg.SMTPUser != "" {
+	fmt.Fprintf(os.Stderr, "\n[VERIFY EMAIL] 验证链接: %s\n[VERIFY EMAIL] 验证后登录: %s\n\n", verifyURL, loginURL)
+
+	if s.smtpConfigured() {
 		from := s.cfg.SMTPFrom
 		if from == "" {
 			from = s.cfg.SMTPUser
 		}
-		addr := fmt.Sprintf("%s:%d", s.cfg.SMTPHost, s.cfg.SMTPPort)
-		auth := smtp.PlainAuth("", s.cfg.SMTPUser, s.cfg.SMTPPassword, s.cfg.SMTPHost)
 		message := strings.Join([]string{
 			fmt.Sprintf("From: %s", from),
 			fmt.Sprintf("To: %s", email),
@@ -141,22 +205,37 @@ func (s *Service) sendVerificationEmail(ctx context.Context, userID, email strin
 			"MIME-Version: 1.0",
 			"Content-Type: text/plain; charset=UTF-8",
 			"",
-			"欢迎注册 XLab。",
 			"请点击下面的链接完成邮箱验证，链接 24 小时内有效：",
 			verifyURL,
 			"",
-			"验证成功后可从这里登录：",
+			"验证成功后可以从这里登录：",
 			loginURL,
 		}, "\r\n")
-		return smtp.SendMail(addr, auth, from, []string{email}, []byte(message))
+
+		if err := s.sendSMTPMail(from, []string{email}, []byte(message)); err != nil {
+			log.Printf("[SMTP ERROR] 邮件发送失败 to=%s host=%s port=%d: %v", email, s.cfg.SMTPHost, s.cfg.SMTPPort, err)
+			return nil
+		}
+		log.Printf("[SMTP OK] 验证邮件已发送至 %s", email)
 	}
 
-	fmt.Printf("\n[EMAIL VERIFY DEV]\n%s\nLogin after verify: %s\n\n", verifyURL, loginURL)
 	return nil
 }
 
 func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 	tokenHash := HashToken(rawToken)
+
+	pending, err := s.repo.GetPendingRegistrationByTokenHash(ctx, tokenHash)
+	if err == nil {
+		if _, err := s.repo.CreateVerifiedUser(ctx, pending.Email, pending.Username, pending.PasswordHash); err != nil {
+			return fmt.Errorf("创建用户失败: %w", err)
+		}
+		_ = s.repo.DeletePendingRegistration(ctx, pending.ID)
+		return nil
+	}
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
 
 	t, err := s.repo.GetEmailVerificationToken(ctx, tokenHash)
 	if err != nil {
@@ -237,10 +316,17 @@ func (s *Service) RequestMagicLink(_ context.Context, input MagicLinkRequestInpu
 	s.mu.Unlock()
 
 	loginURL := fmt.Sprintf("%s/api/auth/magic-link/verify?token=%s", strings.TrimRight(s.cfg.FrontendURL, "/"), rawToken)
-	if s.cfg.AppEnv == "development" {
-		fmt.Printf("\n[MAGIC LINK DEV] %s\n\n", loginURL)
-	} else if err := s.sendMagicLinkEmail(email, loginURL); err != nil {
-		return nil, err
+
+	// 始终打印登录链接到控制台（SMTP 故障时可用）
+	fmt.Fprintf(os.Stderr, "\n[MAGIC LINK] %s\n\n", loginURL)
+
+	if s.smtpConfigured() {
+		if err := s.sendMagicLinkEmail(email, loginURL); err != nil {
+			// 邮件发送失败不阻塞请求，链接已打印到控制台
+			log.Printf("[SMTP ERROR] Magic Link 发送失败 to=%s: %v", email, err)
+		}
+	} else {
+		log.Printf("[SMTP DISABLED] SMTP 配置不完整，Magic Link 仅打印到控制台")
 	}
 
 	return &MagicLinkRequestResult{
@@ -315,7 +401,7 @@ func sanitizeMagicUsername(value string) string {
 }
 
 func (s *Service) sendMagicLinkEmail(email string, loginURL string) error {
-	if s.cfg.SMTPHost == "" || s.cfg.SMTPUser == "" || s.cfg.SMTPPassword == "" {
+	if !s.smtpConfigured() {
 		return fmt.Errorf("SMTP 配置不完整，无法发送登录邮件")
 	}
 
@@ -324,8 +410,6 @@ func (s *Service) sendMagicLinkEmail(email string, loginURL string) error {
 		from = s.cfg.SMTPUser
 	}
 
-	addr := fmt.Sprintf("%s:%d", s.cfg.SMTPHost, s.cfg.SMTPPort)
-	auth := smtp.PlainAuth("", s.cfg.SMTPUser, s.cfg.SMTPPassword, s.cfg.SMTPHost)
 	message := strings.Join([]string{
 		fmt.Sprintf("From: %s", from),
 		fmt.Sprintf("To: %s", email),
@@ -337,7 +421,62 @@ func (s *Service) sendMagicLinkEmail(email string, loginURL string) error {
 		loginURL,
 	}, "\r\n")
 
-	return smtp.SendMail(addr, auth, from, []string{email}, []byte(message))
+	return s.sendSMTPMail(from, []string{email}, []byte(message))
+}
+
+func (s *Service) smtpConfigured() bool {
+	return s.cfg.SMTPHost != "" && s.cfg.SMTPUser != "" && s.cfg.SMTPPassword != ""
+}
+
+func (s *Service) sendSMTPMail(from string, to []string, message []byte) error {
+	addr := fmt.Sprintf("%s:%d", s.cfg.SMTPHost, s.cfg.SMTPPort)
+	auth := smtp.PlainAuth("", s.cfg.SMTPUser, s.cfg.SMTPPassword, s.cfg.SMTPHost)
+
+	if s.cfg.SMTPPort != 465 {
+		return smtp.SendMail(addr, auth, from, to, message)
+	}
+
+	dialer := &net.Dialer{Timeout: 10 * time.Second}
+	conn, err := tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{
+		ServerName: s.cfg.SMTPHost,
+		MinVersion: tls.VersionTLS12,
+	})
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	client, err := smtp.NewClient(conn, s.cfg.SMTPHost)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	if err := client.Auth(auth); err != nil {
+		return err
+	}
+	if err := client.Mail(from); err != nil {
+		return err
+	}
+	for _, recipient := range to {
+		if err := client.Rcpt(recipient); err != nil {
+			return err
+		}
+	}
+
+	writer, err := client.Data()
+	if err != nil {
+		return err
+	}
+	if _, err := writer.Write(message); err != nil {
+		_ = writer.Close()
+		return err
+	}
+	if err := writer.Close(); err != nil {
+		return err
+	}
+
+	return client.Quit()
 }
 
 func (s *Service) Logout(ctx context.Context, sessionTokenHash string) error {
